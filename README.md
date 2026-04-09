@@ -4,7 +4,7 @@ Extract accessible light and dark theme background colors from any image. Design
 
 Given an image, the algorithm analyzes its color composition and outputs two hex colors — one for a light theme, one for a dark theme — that harmonize with the image and meet WCAG AAA (7:1) contrast requirements against your text colors.
 
-![Examples showing light and dark theme colors extracted from four different images](assets/examples.png)
+![Examples showing light and dark theme colors extracted from four different images](https://raw.githubusercontent.com/Lisennk/image-to-theme-colors/master/assets/examples.png)
 
 ## Install
 
