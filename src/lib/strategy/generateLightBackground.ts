@@ -16,12 +16,15 @@ export function generateLightBackground(
   analysis: ImageAnalysis,
   ctx: GenerationContext
 ): ThemeColors {
-  let lightHue = analysis.backgroundHue;
-  let lightSaturation = clamp(analysis.backgroundSaturation, 10, 50);
+  // If the background is essentially pure white (S < 3), the image is visually
+  // achromatic despite possible color noise in dark pixels from compression.
+  // Use neutral colors rather than picking up artifacts.
   if (analysis.backgroundSaturation < 3) {
-    lightHue = 40;
-    lightSaturation = 15;
+    return { light: "#FFFFFF", dark: "#2A2925" };
   }
+
+  const lightHue = analysis.backgroundHue;
+  const lightSaturation = clamp(analysis.backgroundSaturation, 10, 50);
   const lightLightness = clamp(
     findMinimumLightness(lightHue, lightSaturation, ctx.lightText, 12.0), 85, 97
   );
