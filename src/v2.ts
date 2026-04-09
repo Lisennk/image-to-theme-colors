@@ -51,7 +51,6 @@ interface Px { h: number; s: number; l: number; r: number; g: number; b: number;
 
 interface An {
   domH: number; domS: number; domL: number;
-  bottomH: number; bottomS: number; bottomIsBg: boolean;
   bgH: number; bgS: number;
   accentH: number; accentS: number; accentL: number; accentStr: number;
   darkH: number; darkS: number;
@@ -106,24 +105,6 @@ function analyze(px: Px[]): An {
     accentStr = accentPx.length / n;
   }
 
-  // ---- Bottom edge hue (last 10% of rows) — where the gradient meets article text ----
-  const bottomPx = px.filter(p => p.row >= 0.90 && p.s >= 3);
-  let bottomH = domH, bottomS = domS, bottomIsBg = true;
-  if (bottomPx.length > 10) {
-    const bw = bottomPx.map(p => p.s);
-    bottomH = circularMean(bottomPx.map(p => p.h), bw);
-    bottomS = clamp(pct(bottomPx.map(p => p.s), 0.25), 0, 60);
-
-    // Is the bottom color a second background or a foreground object?
-    // If concentrated at the bottom (>70% in bottom 40%) → background (e.g. green hill)
-    // If spread through the image → foreground object (e.g. hands, person)
-    if (hueDist(bottomH, domH) > 40) {
-      const nearBottomHue = px.filter(p => hueDist(p.h, bottomH) < 25 && p.s > 10);
-      const inBottom = nearBottomHue.filter(p => p.row >= 0.60).length;
-      bottomIsBg = nearBottomHue.length > 0 && (inBottom / nearBottomHue.length) > 0.80;
-    }
-  }
-
   // ---- Darkest 10% colored ----
   const sortedL = [...px].sort((a, b) => a.l - b.l);
   const topN = Math.max(30, Math.floor(n * 0.10));
@@ -134,7 +115,7 @@ function analyze(px: Px[]): An {
     darkH = circularMean(dc.map(p => p.h), w); darkS = dc.reduce((s, p) => s + p.s, 0) / dc.length;
   }
 
-  return { domH, domS, domL, bottomH, bottomS, bottomIsBg, bgH, bgS, accentH, accentS, accentL, accentStr, darkH, darkS,
+  return { domH, domS, domL, bgH, bgS, accentH, accentS, accentL, accentStr, darkH, darkS,
     avgSat: px.reduce((s, p) => s + p.s, 0) / n, medianL: pct(px.map(p => p.l), 0.50) };
 }
 
@@ -174,26 +155,10 @@ function solveLightSL(h: number, origS: number, origL: number, targetRatio: numb
 // ---- Generation ----
 
 function genDominantMid(a: An): ThemeColors {
-  // If the bottom edge has a distinctly different hue AND it's a second background
-  // (not a foreground object), the image is multi-hue (e.g. blue sky + green hill).
-  const bottomDiffers = hueDist(a.bottomH, a.domH) > 40 && a.bottomIsBg;
-
-  let lightH: number, lightOrigS: number, lightOrigL: number;
-  if (bottomDiffers && a.accentStr > 0.01 && a.accentS > 10) {
-    lightH = a.accentH;
-    lightOrigS = a.accentS;
-    lightOrigL = a.accentL;
-  } else {
-    lightH = a.domH;
-    lightOrigS = a.domS;
-    lightOrigL = a.domL;
-  }
-  const { s, l } = solveLightSL(lightH, lightOrigS, lightOrigL, 9.5);
-
-  const dh = bottomDiffers ? a.bottomH : a.domH;
-  const ds = bottomDiffers ? clamp(a.bottomS * 1.5, 25, 100) : clamp(a.domS * 1.5, 25, 100);
-  const dark = ensureDark({ h: dh, s: ds, l: 12 });
-  return { light: rgbToHex(hslToRgb({ h: lightH, s, l })), dark: rgbToHex(hslToRgb(dark)) };
+  const { s, l } = solveLightSL(a.domH, a.domS, a.domL, 9.5);
+  const darkS = clamp(a.domS * 1.5, 25, 100);
+  const dark = ensureDark({ h: a.domH, s: darkS, l: 12 });
+  return { light: rgbToHex(hslToRgb({ h: a.domH, s, l })), dark: rgbToHex(hslToRgb(dark)) };
 }
 
 function genLightBg(a: An): ThemeColors {
@@ -201,19 +166,18 @@ function genLightBg(a: An): ThemeColors {
   if (a.bgS < 3) { lh = 40; ls = 15; }
   const ll = clamp(findMinL(lh, ls, LIGHT_TEXT, 12.0), 85, 97);
 
-  let dh: number, ds: number, dl: number;
+  let dh: number, ds: number;
   const bgIsCool = a.bgH >= 180 && a.bgH <= 300;
   if (a.bgS >= 3 && bgIsCool) {
-    // Cool background: use bottom edge hue (more accurate than avg bg) and slightly higher L
-    dh = a.bottomH; ds = clamp(a.bottomS * 1.2, 15, 50); dl = 20;
+    dh = a.bgH; ds = clamp(a.bgS * 1.2, 15, 50);
   } else if (a.accentStr > 0.01 && a.accentS > 15) {
-    dh = a.accentH; ds = clamp(a.accentS * 1.8, 25, 70); dl = 18;
+    dh = a.accentH; ds = clamp(a.accentS, 25, 70);
   } else if (a.bgS >= 3) {
-    dh = a.bgH; ds = clamp(a.bgS * 1.5, 15, 50); dl = 18;
+    dh = a.bgH; ds = clamp(a.bgS * 1.5, 15, 50);
   } else {
-    dh = a.darkH; ds = clamp(a.darkS, 15, 50); dl = 18;
+    dh = a.darkH; ds = clamp(a.darkS, 15, 50);
   }
-  const dark = ensureDark({ h: dh, s: ds, l: dl });
+  const dark = ensureDark({ h: dh, s: ds, l: 18 });
   return { light: rgbToHex(hslToRgb({ h: lh, s: ls, l: ll })), dark: rgbToHex(hslToRgb(dark)) };
 }
 
@@ -235,15 +199,13 @@ function genDarkBg(a: An): ThemeColors {
   }
 
   const ds = clamp(a.domS * 1.5, 20, 100);
-  // Higher domS → can go darker (color still visible); lower domS → keep lighter
-  const darkL = clamp(14 - a.domS * 0.07, 6, 12);
-  const dark = ensureDark({ h: a.domH, s: ds, l: darkL });
+  const dark = ensureDark({ h: a.domH, s: ds, l: 10 });
   return { light: rgbToHex(hslToRgb({ h: lh, s: ls, l: ll })), dark: rgbToHex(hslToRgb(dark)) };
 }
 
 function generate(a: An): ThemeColors {
   const st = pickStrat(a);
-switch (st) {
+  switch (st) {
     case "achromatic": return { light: "#FFFFFF", dark: "#2A2925" };
     case "dominant_mid": return genDominantMid(a);
     case "light_bg": return genLightBg(a);

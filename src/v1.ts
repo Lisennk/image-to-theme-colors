@@ -46,12 +46,10 @@ function ensureDark(hsl: HSL): HSL {
   return a;
 }
 
-// row: 0=top, 1=bottom.  col: 0=left, 1=right.
-interface Px { h: number; s: number; l: number; r: number; g: number; b: number; row: number; col: number }
+interface Px { h: number; s: number; l: number; r: number; g: number; b: number; row: number }
 
 interface An {
   domH: number; domS: number; domL: number;
-  bottomH: number; bottomS: number; bottomIsBg: boolean;
   bgH: number; bgS: number;
   accentH: number; accentS: number; accentL: number; accentStr: number;
   darkH: number; darkS: number;
@@ -61,20 +59,13 @@ interface An {
 function analyze(px: Px[]): An {
   const n = px.length;
 
-  // ---- Dominant hue: full image with extra weight for border/background pixels ----
-  // Border = bottom 15% strip + left/right 10% edges in bottom half
-  // These are likely background (subjects are centered), so boost them 3x.
+  // Dominant hue (bottom-boosted, skip S<3)
   const bins = 36, hist = new Float64Array(bins);
-  for (const p of px) {
-    if (p.s < 3) continue;
-    const isBorder = p.row >= 0.85 || (p.row >= 0.5 && (p.col < 0.10 || p.col > 0.90));
-    const weight = (1 + p.row) * (isBorder ? 3 : 1);
-    hist[Math.floor(p.h / 10) % bins] += weight;
-  }
+  for (const p of px) { if (p.s < 3) continue; hist[Math.floor(p.h / 10) % bins] += 1 + p.row; }
   let maxW = 0, best = 0;
   for (let i = 0; i < bins; i++) {
-    const wt = hist[(i - 1 + bins) % bins] + hist[i] + hist[(i + 1) % bins];
-    if (wt > maxW) { maxW = wt; best = i; }
+    const w = hist[(i - 1 + bins) % bins] + hist[i] + hist[(i + 1) % bins];
+    if (w > maxW) { maxW = w; best = i; }
   }
   const db = [(best - 1 + bins) % bins, best, (best + 1) % bins];
   const domH = circularMean(db.filter(b => hist[b] > 0).map(b => b * 10 + 5), db.map(b => hist[b]));
@@ -83,7 +74,7 @@ function analyze(px: Px[]): An {
   const domS = clamp(pct(nearDom.map(p => p.s), 0.25), 0, 60);
   const domL = pct(nearDom.map(p => p.l), 0.50);
 
-  // ---- Background from avg RGB of very bright pixels (L > 90%) ----
+  // Background from avg RGB of L > 90%
   const vb = px.filter(p => p.l > 90);
   let bgH = 0, bgS = 0;
   if (vb.length > 20) {
@@ -94,37 +85,20 @@ function analyze(px: Px[]): An {
     bgH = hsl.h; bgS = hsl.s;
   }
 
-  // ---- Accent: bright non-dominant, L²-weighted ----
+  // Accent: bright non-dominant, weighted by S * L² to favor brighter elements
   const accentPx = px.filter(p => p.l > 25 && p.s > 15 && hueDist(p.h, domH) > 25);
   let accentH = 0, accentS = 0, accentL = 50, accentStr = 0;
   if (accentPx.length > 15) {
-    const w = accentPx.map(p => p.s * p.l * p.l);
+    const w = accentPx.map(p => p.s * p.l * p.l); // L² weighting → favor bright
     accentH = circularMean(accentPx.map(p => p.h), w);
+    // S and L weighted by brightness
     const tw = w.reduce((a, b) => a + b, 0);
     accentS = w.reduce((s, wi, i) => s + accentPx[i].s * wi, 0) / tw;
     accentL = w.reduce((s, wi, i) => s + accentPx[i].l * wi, 0) / tw;
     accentStr = accentPx.length / n;
   }
 
-  // ---- Bottom edge hue (last 10% of rows) — where the gradient meets article text ----
-  const bottomPx = px.filter(p => p.row >= 0.90 && p.s >= 3);
-  let bottomH = domH, bottomS = domS, bottomIsBg = true;
-  if (bottomPx.length > 10) {
-    const bw = bottomPx.map(p => p.s);
-    bottomH = circularMean(bottomPx.map(p => p.h), bw);
-    bottomS = clamp(pct(bottomPx.map(p => p.s), 0.25), 0, 60);
-
-    // Is the bottom color a second background or a foreground object?
-    // If concentrated at the bottom (>70% in bottom 40%) → background (e.g. green hill)
-    // If spread through the image → foreground object (e.g. hands, person)
-    if (hueDist(bottomH, domH) > 40) {
-      const nearBottomHue = px.filter(p => hueDist(p.h, bottomH) < 25 && p.s > 10);
-      const inBottom = nearBottomHue.filter(p => p.row >= 0.60).length;
-      bottomIsBg = nearBottomHue.length > 0 && (inBottom / nearBottomHue.length) > 0.80;
-    }
-  }
-
-  // ---- Darkest 10% colored ----
+  // Darkest 10%
   const sortedL = [...px].sort((a, b) => a.l - b.l);
   const topN = Math.max(30, Math.floor(n * 0.10));
   const dc = sortedL.slice(0, topN).filter(p => p.s > 5);
@@ -134,11 +108,10 @@ function analyze(px: Px[]): An {
     darkH = circularMean(dc.map(p => p.h), w); darkS = dc.reduce((s, p) => s + p.s, 0) / dc.length;
   }
 
-  return { domH, domS, domL, bottomH, bottomS, bottomIsBg, bgH, bgS, accentH, accentS, accentL, accentStr, darkH, darkS,
+  return { domH, domS, domL, bgH, bgS, accentH, accentS, accentL, accentStr, darkH, darkS,
     avgSat: px.reduce((s, p) => s + p.s, 0) / n, medianL: pct(px.map(p => p.l), 0.50) };
 }
 
-// ---- Strategy ----
 type Strat = "achromatic" | "dominant_mid" | "light_bg" | "dark_bg";
 
 function pickStrat(a: An): Strat {
@@ -153,7 +126,6 @@ function pickStrat(a: An): Strat {
   return "dominant_mid";
 }
 
-// ---- Chroma helpers ----
 function chromaS(origS: number, origL: number, newL: number) {
   const c = (origS / 100) * (1 - Math.abs(2 * origL / 100 - 1));
   const r = 1 - Math.abs(2 * newL / 100 - 1);
@@ -171,49 +143,32 @@ function solveLightSL(h: number, origS: number, origL: number, targetRatio: numb
   return { s, l };
 }
 
-// ---- Generation ----
-
 function genDominantMid(a: An): ThemeColors {
-  // If the bottom edge has a distinctly different hue AND it's a second background
-  // (not a foreground object), the image is multi-hue (e.g. blue sky + green hill).
-  const bottomDiffers = hueDist(a.bottomH, a.domH) > 40 && a.bottomIsBg;
-
-  let lightH: number, lightOrigS: number, lightOrigL: number;
-  if (bottomDiffers && a.accentStr > 0.01 && a.accentS > 10) {
-    lightH = a.accentH;
-    lightOrigS = a.accentS;
-    lightOrigL = a.accentL;
-  } else {
-    lightH = a.domH;
-    lightOrigS = a.domS;
-    lightOrigL = a.domL;
-  }
-  const { s, l } = solveLightSL(lightH, lightOrigS, lightOrigL, 9.5);
-
-  const dh = bottomDiffers ? a.bottomH : a.domH;
-  const ds = bottomDiffers ? clamp(a.bottomS * 1.5, 25, 100) : clamp(a.domS * 1.5, 25, 100);
-  const dark = ensureDark({ h: dh, s: ds, l: 12 });
-  return { light: rgbToHex(hslToRgb({ h: lightH, s, l })), dark: rgbToHex(hslToRgb(dark)) };
+  const { s, l } = solveLightSL(a.domH, a.domS, a.domL, 9.5);
+  const darkS = clamp(a.domS * 1.5, 25, 100);
+  const dark = ensureDark({ h: a.domH, s: darkS, l: 12 });
+  return { light: rgbToHex(hslToRgb({ h: a.domH, s, l })), dark: rgbToHex(hslToRgb(dark)) };
 }
 
 function genLightBg(a: An): ThemeColors {
+  // Light: bg tint with original S (no multiplier)
   let lh = a.bgH, ls = clamp(a.bgS, 10, 50);
   if (a.bgS < 3) { lh = 40; ls = 15; }
   const ll = clamp(findMinL(lh, ls, LIGHT_TEXT, 12.0), 85, 97);
 
-  let dh: number, ds: number, dl: number;
+  // Dark: cool bg → darken; warm bg → use accent
+  let dh: number, ds: number;
   const bgIsCool = a.bgH >= 180 && a.bgH <= 300;
   if (a.bgS >= 3 && bgIsCool) {
-    // Cool background: use bottom edge hue (more accurate than avg bg) and slightly higher L
-    dh = a.bottomH; ds = clamp(a.bottomS * 1.2, 15, 50); dl = 20;
+    dh = a.bgH; ds = clamp(a.bgS * 1.2, 15, 50);
   } else if (a.accentStr > 0.01 && a.accentS > 15) {
-    dh = a.accentH; ds = clamp(a.accentS * 1.8, 25, 70); dl = 18;
+    dh = a.accentH; ds = clamp(a.accentS, 25, 70);
   } else if (a.bgS >= 3) {
-    dh = a.bgH; ds = clamp(a.bgS * 1.5, 15, 50); dl = 18;
+    dh = a.bgH; ds = clamp(a.bgS * 1.5, 15, 50);
   } else {
-    dh = a.darkH; ds = clamp(a.darkS, 15, 50); dl = 18;
+    dh = a.darkH; ds = clamp(a.darkS, 15, 50);
   }
-  const dark = ensureDark({ h: dh, s: ds, l: dl });
+  const dark = ensureDark({ h: dh, s: ds, l: 18 });
   return { light: rgbToHex(hslToRgb({ h: lh, s: ls, l: ll })), dark: rgbToHex(hslToRgb(dark)) };
 }
 
@@ -222,11 +177,14 @@ function genDarkBg(a: An): ThemeColors {
   if (a.accentStr > 0.001 && a.accentS > 15) {
     lh = a.accentH;
     if (a.accentStr > 0.05) {
+      // Strong accent (large colored area) → moderate S for subtle pastel
       ls = clamp(a.accentS * 0.6, 15, 80);
     } else {
+      // Weak accent (small vivid element like a star) → max S to amplify
       ls = 100;
     }
-    ll = 85;
+    ll = 85; // fixed aesthetic L for dark_bg pastels
+    // Ensure AAA contrast
     if (contrastRatio(hslToRgb({ h: lh, s: ls, l: ll }), LIGHT_TEXT) < 7.0)
       ll = clamp(findMinL(lh, ls, LIGHT_TEXT, 7.0), 75, 97);
   } else {
@@ -235,9 +193,7 @@ function genDarkBg(a: An): ThemeColors {
   }
 
   const ds = clamp(a.domS * 1.5, 20, 100);
-  // Higher domS → can go darker (color still visible); lower domS → keep lighter
-  const darkL = clamp(14 - a.domS * 0.07, 6, 12);
-  const dark = ensureDark({ h: a.domH, s: ds, l: darkL });
+  const dark = ensureDark({ h: a.domH, s: ds, l: 10 });
   return { light: rgbToHex(hslToRgb({ h: lh, s: ls, l: ll })), dark: rgbToHex(hslToRgb(dark)) };
 }
 
@@ -251,7 +207,6 @@ switch (st) {
   }
 }
 
-// ---- Main ----
 export async function imageToColors(input: string | Buffer): Promise<ThemeColors> {
   const { data, info } = await sharp(input)
     .resize(150, 150, { fit: "inside" })
@@ -263,7 +218,7 @@ export async function imageToColors(input: string | Buffer): Promise<ThemeColors
       const i = (y * w + x) * 4;
       if (data[i + 3] < 128) continue;
       const r = data[i], g = data[i + 1], b = data[i + 2];
-      pixels.push({ ...rgbToHsl({ r, g, b }), r, g, b, row: y / h, col: x / w });
+      pixels.push({ ...rgbToHsl({ r, g, b }), r, g, b, row: y / h });
     }
   return generate(analyze(pixels));
 }

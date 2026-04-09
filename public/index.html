@@ -16,35 +16,31 @@
   }
 
   .header {
-    padding: 32px 24px 24px;
-    text-align: center;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
     border-bottom: 1px solid #333;
   }
 
-  .header h1 {
-    font-size: 22px;
-    font-weight: 600;
-    margin-bottom: 16px;
-  }
+  .header h1 { font-size: 15px; font-weight: 600; white-space: nowrap; }
 
   .upload-area {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 16px;
-    flex-wrap: wrap;
+    gap: 12px;
   }
 
   .upload-area label {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 10px 24px;
+    gap: 6px;
+    padding: 6px 16px;
     background: #2d6cdf;
     color: white;
-    border-radius: 8px;
+    border-radius: 6px;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
     transition: background 0.15s;
   }
@@ -52,65 +48,76 @@
   .upload-area label:hover { background: #1b56c0; }
   .upload-area input[type="file"] { display: none; }
 
-  .file-count {
-    font-size: 13px;
-    color: #888;
-  }
+  .file-count { font-size: 12px; color: #888; }
 
   .spinner {
     display: none;
-    width: 20px;
-    height: 20px;
+    width: 16px; height: 16px;
     border: 2px solid #555;
     border-top-color: #2d6cdf;
     border-radius: 50%;
     animation: spin 0.6s linear infinite;
   }
-
   .spinner.visible { display: inline-block; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
   .results {
-    padding: 32px 24px;
+    padding: 20px;
     display: flex;
     flex-direction: column;
-    gap: 48px;
-    max-width: 1200px;
-    margin: 0 auto;
-  }
-
-  .image-group h2 {
-    font-size: 14px;
-    font-weight: 500;
-    color: #888;
-    margin-bottom: 16px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .image-group h2 .swatch {
-    display: inline-block;
-    width: 14px;
-    height: 14px;
-    border-radius: 3px;
-    border: 1px solid rgba(255,255,255,0.15);
-  }
-
-  .previews {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
     gap: 24px;
   }
 
-  @media (max-width: 800px) {
-    .previews { grid-template-columns: 1fr; }
+  .image-group-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #888;
+    margin-bottom: 8px;
+  }
+
+  /* 3 versions in a row, each with light+dark side by side */
+  .versions-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+  }
+
+  .version-col h3 {
+    font-size: 10px;
+    font-weight: 600;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .version-col h3 .swatch {
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 2px;
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+
+  .version-col h3 .hex {
+    font-family: "SF Mono", Menlo, monospace;
+    font-weight: 400;
+    color: #444;
+    font-size: 10px;
+  }
+
+  .theme-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
   }
 
   .article-preview {
-    border-radius: 16px;
+    border-radius: 10px;
     overflow: hidden;
-    box-shadow: 0 2px 24px rgba(0,0,0,0.4);
+    box-shadow: 0 1px 12px rgba(0,0,0,0.3);
   }
 
   .article-preview .hero {
@@ -120,60 +127,61 @@
   }
 
   .article-preview .hero img {
-    width: 100%;
-    height: 100%;
+    width: 100%; height: 100%;
     object-fit: cover;
     display: block;
   }
 
   .article-preview .hero .fade {
     position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
+    bottom: 0; left: 0; right: 0;
     height: 60%;
     pointer-events: none;
   }
 
   .article-preview .body {
-    padding: 24px 28px 32px;
+    padding: 10px 12px 14px;
   }
 
   .article-preview .theme-label {
-    font-size: 10px;
+    font-size: 8px;
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     opacity: 0.45;
-    margin-bottom: 12px;
+    margin-bottom: 6px;
   }
 
   .article-preview .title {
-    font-size: 20px;
+    font-size: 11px;
     font-weight: 700;
     line-height: 1.3;
-    margin-bottom: 12px;
+    margin-bottom: 6px;
   }
 
   .article-preview .excerpt {
-    font-size: 16px;
+    font-size: 10px;
     font-weight: 400;
-    line-height: 1.65;
+    line-height: 1.5;
   }
 
   .article-preview .color-info {
-    margin-top: 16px;
-    font-size: 11px;
+    margin-top: 8px;
+    font-size: 9px;
     font-family: "SF Mono", Menlo, monospace;
-    opacity: 0.4;
+    opacity: 0.35;
   }
 
   .empty-state {
     text-align: center;
     padding: 80px 24px;
     color: #555;
-    font-size: 15px;
-    line-height: 1.6;
+    font-size: 14px;
+  }
+
+  .separator {
+    border: none;
+    border-top: 1px solid #2a2a2a;
   }
 </style>
 </head>
@@ -183,7 +191,7 @@
   <h1>Image to Article Colors</h1>
   <div class="upload-area">
     <label>
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1v10M4 5l4-4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M1 11v2a2 2 0 002 2h10a2 2 0 002-2v-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1v10M4 5l4-4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M1 11v2a2 2 0 002 2h10a2 2 0 002-2v-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
       Upload Images
       <input type="file" id="fileInput" accept="image/*" multiple>
     </label>
@@ -193,12 +201,12 @@
 </div>
 
 <div class="results" id="results">
-  <div class="empty-state">Upload images to see article background color previews.</div>
+  <div class="empty-state">Upload images to see article background color previews across algorithm versions.</div>
 </div>
 
 <script>
-const ARTICLE_TITLE = "The Quiet Weight of Unseen Effort";
-const ARTICLE_EXCERPT = "We rarely talk about the invisible labor that holds everything together — the late nights, the second-guessing, the small compromises no one notices. But it's there, in every pixel, every paragraph, every carefully chosen word. And sometimes, the most important work is the kind that never gets acknowledged.";
+const TITLE = "The Quiet Weight of Unseen Effort";
+const EXCERPT = "We rarely talk about the invisible labor that holds everything together — the late nights, the second-guessing, the small compromises no one notices.";
 
 const fileInput = document.getElementById("fileInput");
 const fileCount = document.getElementById("fileCount");
@@ -208,17 +216,13 @@ const results = document.getElementById("results");
 fileInput.addEventListener("change", async () => {
   const files = fileInput.files;
   if (!files || files.length === 0) return;
-
-  fileCount.textContent = `${files.length} file${files.length > 1 ? "s" : ""} selected`;
+  fileCount.textContent = `${files.length} file${files.length > 1 ? "s" : ""}`;
   spinner.classList.add("visible");
-
   const form = new FormData();
   for (const f of files) form.append("images", f);
-
   try {
     const res = await fetch("/api/analyze", { method: "POST", body: form });
-    const data = await res.json();
-    renderResults(data);
+    renderResults(await res.json());
   } catch (err) {
     results.innerHTML = `<div class="empty-state">Error: ${err.message}</div>`;
   } finally {
@@ -228,57 +232,51 @@ fileInput.addEventListener("change", async () => {
 
 function renderResults(data) {
   results.innerHTML = "";
-
-  for (const item of data) {
-    if (item.error || !item.colors) {
-      const el = document.createElement("div");
-      el.className = "image-group";
-      el.innerHTML = `<h2>${esc(item.name)} — Error: ${esc(item.error || "unknown")}</h2>`;
-      results.appendChild(el);
-      continue;
-    }
-
+  for (let i = 0; i < data.length; i++) {
+    const item = data[i];
     const group = document.createElement("div");
-    group.className = "image-group";
 
-    group.innerHTML = `
-      <h2>
-        ${esc(item.name)}
-        <span class="swatch" style="background:${item.colors.light}"></span>
-        <span style="color:#888">${item.colors.light}</span>
-        <span class="swatch" style="background:${item.colors.dark}"></span>
-        <span style="color:#888">${item.colors.dark}</span>
-      </h2>
-      <div class="previews">
-        ${articleCard(item.dataUrl, item.colors.light, "#2A2925", "Light theme", item.colors.light)}
-        ${articleCard(item.dataUrl, item.colors.dark, "#FFFFFF", "Dark theme", item.colors.dark)}
-      </div>`;
-
+    let html = `<div class="image-group-label">${esc(item.name)}</div><div class="versions-row">`;
+    for (const v of item.versions) {
+      if (!v.colors) {
+        html += `<div class="version-col"><h3>${esc(v.label)} — Error</h3></div>`;
+        continue;
+      }
+      html += `
+        <div class="version-col">
+          <h3>
+            ${esc(v.label)}
+            <span class="swatch" style="background:${v.colors.light}"></span>
+            <span class="hex">${v.colors.light}</span>
+            <span class="swatch" style="background:${v.colors.dark}"></span>
+            <span class="hex">${v.colors.dark}</span>
+          </h3>
+          <div class="theme-pair">
+            ${card(item.dataUrl, v.colors.light, "#2A2925", "Light", v.colors.light)}
+            ${card(item.dataUrl, v.colors.dark, "#FFFFFF", "Dark", v.colors.dark)}
+          </div>
+        </div>`;
+    }
+    html += `</div>`;
+    group.innerHTML = html;
     results.appendChild(group);
+    if (i < data.length - 1) { const s = document.createElement("hr"); s.className = "separator"; results.appendChild(s); }
   }
 }
 
-function articleCard(imgSrc, bgColor, textColor, label, hexVal) {
-  return `
-    <div class="article-preview" style="background:${bgColor}">
-      <div class="hero">
-        <img src="${imgSrc}" alt="">
-        <div class="fade" style="background:linear-gradient(to bottom, transparent 0%, ${bgColor} 100%)"></div>
-      </div>
-      <div class="body" style="color:${textColor}">
-        <div class="theme-label">${label}</div>
-        <div class="title">${ARTICLE_TITLE}</div>
-        <div class="excerpt">${ARTICLE_EXCERPT}</div>
-        <div class="color-info">${hexVal}</div>
-      </div>
-    </div>`;
+function card(img, bg, text, label, hex) {
+  return `<div class="article-preview" style="background:${bg}">
+    <div class="hero"><img src="${img}" alt=""><div class="fade" style="background:linear-gradient(to bottom,transparent 0%,${bg} 100%)"></div></div>
+    <div class="body" style="color:${text}">
+      <div class="theme-label">${label}</div>
+      <div class="title">${TITLE}</div>
+      <div class="excerpt">${EXCERPT}</div>
+      <div class="color-info">${hex}</div>
+    </div>
+  </div>`;
 }
 
-function esc(s) {
-  const d = document.createElement("div");
-  d.textContent = s;
-  return d.innerHTML;
-}
+function esc(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
 </script>
 </body>
 </html>
