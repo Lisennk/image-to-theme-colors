@@ -7,6 +7,7 @@ const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
 
 app.use(express.static(path.resolve(__dirname, "../../public")));
+app.use("/examples", express.static(path.resolve(__dirname, "../../examples")));
 
 app.post("/api/analyze", upload.array("images", 50), async (req, res) => {
   const files = req.files as Express.Multer.File[];

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Showcase</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1.3.1/dist/fonts/geist-sans/style.min.css">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Geist", system-ui, sans-serif; background: #111; padding: 40px 48px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; max-width: 1300px; }
+  .example { display: flex; gap: 14px; }
+  .example .card {
+    flex: 1; border-radius: 14px; overflow: hidden;
+    box-shadow: 0 2px 24px rgba(0,0,0,0.5);
+  }
+  .card .hero { position: relative; aspect-ratio: 1/1; overflow: hidden; }
+  .card .hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .card .hero .fade {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 55%;
+    pointer-events: none;
+  }
+  .card .body { padding: 14px 16px 18px; }
+  .card .label {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; opacity: 0.4; margin-bottom: 6px;
+  }
+  .card .title { font-size: 13px; font-weight: 700; line-height: 1.3; margin-bottom: 6px; }
+  .card .text { font-size: 11px; font-weight: 400; line-height: 1.55; opacity: 0.85; }
+  .card .hex { margin-top: 10px; font-size: 10px; font-family: monospace; opacity: 0.3; }
+  .src-label {
+    font-size: 11px; color: #555; margin-bottom: 10px; font-weight: 500;
+  }
+</style>
+</head>
+<body>
+<div class="grid" id="grid"></div>
+<script>
+const TITLE = "The Quiet Weight of Unseen Effort";
+const TEXT = "We rarely talk about the invisible labor that holds everything together — the late nights, the second-guessing, the small compromises.";
+
+const data = [
+  { file: "3.jpg", light: "#C0D0FF", dark: "#0F172F" },
+  { file: "8.jpg", light: "#FFE9B3", dark: "#021B2F" },
+  { file: "5.jpg", light: "#EDE9DE", dark: "#112F4B" },
+  { file: "2.jpg", light: "#D4D3AB", dark: "#2F2E0F" },
+];
+
+const grid = document.getElementById("grid");
+for (const d of data) {
+  const img = "/examples/" + d.file;
+  const el = document.createElement("div");
+  el.className = "example";
+  el.innerHTML = card(img, d.light, "#2A2925", "Light", d.light) + card(img, d.dark, "#FFFFFF", "Dark", d.dark);
+  grid.appendChild(el);
+}
+
+function card(img, bg, text, label, hex) {
+  return '<div class="card" style="background:' + bg + '">' +
+    '<div class="hero"><img src="' + img + '"><div class="fade" style="background:linear-gradient(to bottom,transparent 0%,' + bg + ' 100%)"></div></div>' +
+    '<div class="body" style="color:' + text + '">' +
+    '<div class="label">' + label + ' ' + hex + '</div>' +
+    '<div class="title">' + TITLE + '</div>' +
+    '<div class="text">' + TEXT + '</div>' +
+    '</div></div>';
+}
+</script>
+</body>
+</html>
