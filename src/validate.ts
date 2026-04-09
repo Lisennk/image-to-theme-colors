@@ -2,14 +2,11 @@ import path from "path";
 import { imageToColors } from "./index";
 import {
   hexToRgb,
-  rgbToHex,
   rgbToHsl,
-  rgbDistance,
   colorDiffPercent,
   contrastRatio,
   LIGHT_TEXT,
   DARK_TEXT,
-  relativeLuminance,
 } from "./colorUtils";
 
 interface Example {
@@ -32,55 +29,80 @@ const examples: Example[] = [
   { id: 10, image: "10.jpg", lightTarget: "#E8DAD3", darkTarget: "#182C23" },
 ];
 
-const TOLERANCE = 5; // 5% tolerance
+const TOLERANCE = 5;
+
+function bar(pct: number, width = 20): string {
+  const filled = Math.round((Math.min(pct, 10) / 10) * width);
+  const ch = pct <= TOLERANCE ? "█" : "░";
+  return ch.repeat(filled) + "·".repeat(width - filled);
+}
 
 async function validate() {
   let passed = 0;
-  let total = examples.length;
+  const total = examples.length;
+  const allDiffs: number[] = [];
+  const rows: string[] = [];
 
   for (const ex of examples) {
     const imgPath = path.resolve(__dirname, "../examples", ex.image);
     try {
       const result = await imageToColors(imgPath);
 
-      const lightPredRgb = hexToRgb(result.light);
-      const darkPredRgb = hexToRgb(result.dark);
-      const lightTargetRgb = hexToRgb(ex.lightTarget);
-      const darkTargetRgb = hexToRgb(ex.darkTarget);
+      const lp = hexToRgb(result.light), lt = hexToRgb(ex.lightTarget);
+      const dp = hexToRgb(result.dark), dt = hexToRgb(ex.darkTarget);
 
-      const lightDiff = colorDiffPercent(lightPredRgb, lightTargetRgb);
-      const darkDiff = colorDiffPercent(darkPredRgb, darkTargetRgb);
+      const ld = colorDiffPercent(lp, lt);
+      const dd = colorDiffPercent(dp, dt);
+      allDiffs.push(ld, dd);
 
-      const lightOk = lightDiff <= TOLERANCE;
-      const darkOk = darkDiff <= TOLERANCE;
-      const ok = lightOk && darkOk;
+      const lok = ld <= TOLERANCE, dok = dd <= TOLERANCE;
+      const ok = lok && dok;
       if (ok) passed++;
 
-      // Contrast checks
-      const lightContrast = contrastRatio(lightPredRgb, LIGHT_TEXT);
-      const darkContrast = contrastRatio(darkPredRgb, DARK_TEXT);
+      const lc = contrastRatio(lp, LIGHT_TEXT);
+      const dc = contrastRatio(dp, DARK_TEXT);
+      const lcOk = lc >= 7.0, dcOk = dc >= 7.0;
 
-      console.log(
-        `Example ${ex.id}: ${ok ? "PASS ✓" : "FAIL ✗"}` +
-          `\n  Light: ${result.light} (target: ${ex.lightTarget})` +
-          `  diff=${lightDiff.toFixed(1)}%  ${lightOk ? "✓" : "✗"}` +
-          `  contrast=${lightContrast.toFixed(1)}:1` +
-          `\n  Dark:  ${result.dark} (target: ${ex.darkTarget})` +
-          `  diff=${darkDiff.toFixed(1)}%  ${darkOk ? "✓" : "✗"}` +
-          `  contrast=${darkContrast.toFixed(1)}:1` +
-          `\n  Light HSL pred: ${JSON.stringify(rgbToHsl(lightPredRgb))}` +
-          `\n  Light HSL targ: ${JSON.stringify(rgbToHsl(lightTargetRgb))}` +
-          `\n  Dark HSL pred:  ${JSON.stringify(rgbToHsl(darkPredRgb))}` +
-          `\n  Dark HSL targ:  ${JSON.stringify(rgbToHsl(darkTargetRgb))}` +
-          "\n"
+      rows.push(
+        `${ok ? "✓" : "✗"} Ex ${String(ex.id).padStart(2)}  ` +
+        `L ${result.light} ${ld.toFixed(1).padStart(5)}% |${bar(ld)}| ${lok ? "✓" : "✗"}  ` +
+        `D ${result.dark} ${dd.toFixed(1).padStart(5)}% |${bar(dd)}| ${dok ? "✓" : "✗"}  ` +
+        `AAA:${lcOk ? "✓" : "✗"}${dcOk ? "✓" : "✗"}`
       );
     } catch (err) {
-      console.log(`Example ${ex.id}: ERROR - ${err}`);
+      rows.push(`✗ Ex ${String(ex.id).padStart(2)}  ERROR: ${err}`);
     }
   }
 
-  console.log(`\n=== Results: ${passed}/${total} passed (${(passed / total * 100).toFixed(0)}%) ===`);
-  console.log(`Target: 80% (${Math.ceil(total * 0.8)}/${total})`);
+  // Header
+  console.log(
+    `  ${"".padStart(6)}  ` +
+    `${"Light".padStart(8)} ${"diff".padStart(6)}  ${"".padStart(22)}     ` +
+    `${"Dark".padStart(9)} ${"diff".padStart(6)}  ${"".padStart(22)}`
+  );
+  console.log("─".repeat(110));
+  for (const r of rows) console.log(r);
+  console.log("─".repeat(110));
+
+  // Summary
+  const avgDiff = allDiffs.reduce((a, b) => a + b, 0) / allDiffs.length;
+  const maxDiff = Math.max(...allDiffs);
+  const lightDiffs = allDiffs.filter((_, i) => i % 2 === 0);
+  const darkDiffs = allDiffs.filter((_, i) => i % 2 === 1);
+  const avgLight = lightDiffs.reduce((a, b) => a + b, 0) / lightDiffs.length;
+  const avgDark = darkDiffs.reduce((a, b) => a + b, 0) / darkDiffs.length;
+
+  console.log(`\nPassed: ${passed}/${total} (${(passed / total * 100).toFixed(0)}%)  |  Avg diff: ${avgDiff.toFixed(2)}%  |  Max diff: ${maxDiff.toFixed(1)}%`);
+  console.log(`  Light avg: ${avgLight.toFixed(2)}%   Dark avg: ${avgDark.toFixed(2)}%`);
+
+  // Per-example breakdown for worst offenders
+  const sorted = allDiffs
+    .map((d, i) => ({ ex: Math.floor(i / 2) + 1, theme: i % 2 === 0 ? "L" : "D", diff: d }))
+    .sort((a, b) => b.diff - a.diff);
+  console.log(`\nWorst diffs:`);
+  for (const s of sorted.slice(0, 5)) {
+    console.log(`  Ex ${s.ex} ${s.theme}: ${s.diff.toFixed(2)}%`);
+  }
 }
 
 validate().then(() => process.exit(0)).catch((e) => { console.error(e); process.exit(1); });
