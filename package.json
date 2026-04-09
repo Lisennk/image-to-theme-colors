@@ -1,27 +1,37 @@
 {
   "name": "image-to-colors",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "directories": {
-    "example": "examples"
+  "description": "Extract accessible light/dark theme background colors from images",
+  "main": "dist/lib/index.js",
+  "types": "dist/lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/lib/index.d.ts",
+      "require": "./dist/lib/index.js",
+      "import": "./dist/lib/index.js"
+    }
   },
+  "files": [
+    "dist/lib/**/*"
+  ],
   "scripts": {
-    "start": "ts-node src/server.ts",
-    "validate": "ts-node src/validate.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc -p tsconfig.json",
+    "dev:server": "ts-node src/dev/server.ts",
+    "dev:validate": "ts-node src/dev/validate.ts",
+    "prepublishOnly": "npm run build"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["image", "color", "theme", "wcag", "contrast", "accessibility", "dark-mode"],
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "sharp": "^0.34.5"
+  },
+  "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/multer": "^2.1.0",
     "@types/node": "^25.5.2",
     "express": "^5.2.1",
     "multer": "^2.1.1",
-    "sharp": "^0.34.5",
     "ts-node": "^10.9.2",
     "typescript": "^6.0.2"
   }

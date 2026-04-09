@@ -1,13 +1,9 @@
 import path from "path";
-import { imageToColors } from "./index";
-import {
-  hexToRgb,
-  rgbToHsl,
-  colorDiffPercent,
-  contrastRatio,
-  LIGHT_TEXT,
-  DARK_TEXT,
-} from "./colorUtils";
+import { imageToColors } from "../lib";
+import { hexToRgb, rgbToHsl } from "../lib/color/conversion";
+import { contrastRatio } from "../lib/color/contrast";
+import { LIGHT_THEME_TEXT as LIGHT_TEXT, DARK_THEME_TEXT as DARK_TEXT } from "../lib/color/contrast";
+import { colorDiffPercent } from "./colorUtils";
 
 interface Example {
   id: number;
@@ -44,7 +40,7 @@ async function validate() {
   const rows: string[] = [];
 
   for (const ex of examples) {
-    const imgPath = path.resolve(__dirname, "../examples", ex.image);
+    const imgPath = path.resolve(__dirname, "../../examples", ex.image);
     try {
       const result = await imageToColors(imgPath);
 
