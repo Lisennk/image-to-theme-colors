@@ -46,7 +46,8 @@ function ensureDark(hsl: HSL): HSL {
   return a;
 }
 
-interface Px { h: number; s: number; l: number; r: number; g: number; b: number; row: number }
+// row: 0=top, 1=bottom.  col: 0=left, 1=right.
+interface Px { h: number; s: number; l: number; r: number; g: number; b: number; row: number; col: number }
 
 interface An {
   domH: number; domS: number; domL: number;
@@ -59,13 +60,20 @@ interface An {
 function analyze(px: Px[]): An {
   const n = px.length;
 
-  // Dominant hue (bottom-boosted, skip S<3)
+  // ---- Dominant hue: full image with extra weight for border/background pixels ----
+  // Border = bottom 15% strip + left/right 10% edges in bottom half
+  // These are likely background (subjects are centered), so boost them 3x.
   const bins = 36, hist = new Float64Array(bins);
-  for (const p of px) { if (p.s < 3) continue; hist[Math.floor(p.h / 10) % bins] += 1 + p.row; }
+  for (const p of px) {
+    if (p.s < 3) continue;
+    const isBorder = p.row >= 0.85 || (p.row >= 0.5 && (p.col < 0.10 || p.col > 0.90));
+    const weight = (1 + p.row) * (isBorder ? 3 : 1);
+    hist[Math.floor(p.h / 10) % bins] += weight;
+  }
   let maxW = 0, best = 0;
   for (let i = 0; i < bins; i++) {
-    const w = hist[(i - 1 + bins) % bins] + hist[i] + hist[(i + 1) % bins];
-    if (w > maxW) { maxW = w; best = i; }
+    const wt = hist[(i - 1 + bins) % bins] + hist[i] + hist[(i + 1) % bins];
+    if (wt > maxW) { maxW = wt; best = i; }
   }
   const db = [(best - 1 + bins) % bins, best, (best + 1) % bins];
   const domH = circularMean(db.filter(b => hist[b] > 0).map(b => b * 10 + 5), db.map(b => hist[b]));
@@ -74,7 +82,7 @@ function analyze(px: Px[]): An {
   const domS = clamp(pct(nearDom.map(p => p.s), 0.25), 0, 60);
   const domL = pct(nearDom.map(p => p.l), 0.50);
 
-  // Background from avg RGB of L > 90%
+  // ---- Background from avg RGB of very bright pixels (L > 90%) ----
   const vb = px.filter(p => p.l > 90);
   let bgH = 0, bgS = 0;
   if (vb.length > 20) {
@@ -85,20 +93,19 @@ function analyze(px: Px[]): An {
     bgH = hsl.h; bgS = hsl.s;
   }
 
-  // Accent: bright non-dominant, weighted by S * L² to favor brighter elements
+  // ---- Accent: bright non-dominant, L²-weighted ----
   const accentPx = px.filter(p => p.l > 25 && p.s > 15 && hueDist(p.h, domH) > 25);
   let accentH = 0, accentS = 0, accentL = 50, accentStr = 0;
   if (accentPx.length > 15) {
-    const w = accentPx.map(p => p.s * p.l * p.l); // L² weighting → favor bright
+    const w = accentPx.map(p => p.s * p.l * p.l);
     accentH = circularMean(accentPx.map(p => p.h), w);
-    // S and L weighted by brightness
     const tw = w.reduce((a, b) => a + b, 0);
     accentS = w.reduce((s, wi, i) => s + accentPx[i].s * wi, 0) / tw;
     accentL = w.reduce((s, wi, i) => s + accentPx[i].l * wi, 0) / tw;
     accentStr = accentPx.length / n;
   }
 
-  // Darkest 10%
+  // ---- Darkest 10% colored ----
   const sortedL = [...px].sort((a, b) => a.l - b.l);
   const topN = Math.max(30, Math.floor(n * 0.10));
   const dc = sortedL.slice(0, topN).filter(p => p.s > 5);
@@ -112,6 +119,7 @@ function analyze(px: Px[]): An {
     avgSat: px.reduce((s, p) => s + p.s, 0) / n, medianL: pct(px.map(p => p.l), 0.50) };
 }
 
+// ---- Strategy ----
 type Strat = "achromatic" | "dominant_mid" | "light_bg" | "dark_bg";
 
 function pickStrat(a: An): Strat {
@@ -126,6 +134,7 @@ function pickStrat(a: An): Strat {
   return "dominant_mid";
 }
 
+// ---- Chroma helpers ----
 function chromaS(origS: number, origL: number, newL: number) {
   const c = (origS / 100) * (1 - Math.abs(2 * origL / 100 - 1));
   const r = 1 - Math.abs(2 * newL / 100 - 1);
@@ -143,6 +152,8 @@ function solveLightSL(h: number, origS: number, origL: number, targetRatio: numb
   return { s, l };
 }
 
+// ---- Generation ----
+
 function genDominantMid(a: An): ThemeColors {
   const { s, l } = solveLightSL(a.domH, a.domS, a.domL, 9.5);
   const darkS = clamp(a.domS * 1.5, 25, 100);
@@ -151,12 +162,10 @@ function genDominantMid(a: An): ThemeColors {
 }
 
 function genLightBg(a: An): ThemeColors {
-  // Light: bg tint with original S (no multiplier)
   let lh = a.bgH, ls = clamp(a.bgS, 10, 50);
   if (a.bgS < 3) { lh = 40; ls = 15; }
   const ll = clamp(findMinL(lh, ls, LIGHT_TEXT, 12.0), 85, 97);
 
-  // Dark: cool bg → darken; warm bg → use accent
   let dh: number, ds: number;
   const bgIsCool = a.bgH >= 180 && a.bgH <= 300;
   if (a.bgS >= 3 && bgIsCool) {
@@ -177,14 +186,11 @@ function genDarkBg(a: An): ThemeColors {
   if (a.accentStr > 0.001 && a.accentS > 15) {
     lh = a.accentH;
     if (a.accentStr > 0.05) {
-      // Strong accent (large colored area) → moderate S for subtle pastel
       ls = clamp(a.accentS * 0.6, 15, 80);
     } else {
-      // Weak accent (small vivid element like a star) → max S to amplify
       ls = 100;
     }
-    ll = 85; // fixed aesthetic L for dark_bg pastels
-    // Ensure AAA contrast
+    ll = 85;
     if (contrastRatio(hslToRgb({ h: lh, s: ls, l: ll }), LIGHT_TEXT) < 7.0)
       ll = clamp(findMinL(lh, ls, LIGHT_TEXT, 7.0), 75, 97);
   } else {
@@ -199,7 +205,7 @@ function genDarkBg(a: An): ThemeColors {
 
 function generate(a: An): ThemeColors {
   const st = pickStrat(a);
-switch (st) {
+  switch (st) {
     case "achromatic": return { light: "#FFFFFF", dark: "#2A2925" };
     case "dominant_mid": return genDominantMid(a);
     case "light_bg": return genLightBg(a);
@@ -207,6 +213,7 @@ switch (st) {
   }
 }
 
+// ---- Main ----
 export async function imageToColors(input: string | Buffer): Promise<ThemeColors> {
   const { data, info } = await sharp(input)
     .resize(150, 150, { fit: "inside" })
@@ -218,7 +225,7 @@ export async function imageToColors(input: string | Buffer): Promise<ThemeColors
       const i = (y * w + x) * 4;
       if (data[i + 3] < 128) continue;
       const r = data[i], g = data[i + 1], b = data[i + 2];
-      pixels.push({ ...rgbToHsl({ r, g, b }), r, g, b, row: y / h });
+      pixels.push({ ...rgbToHsl({ r, g, b }), r, g, b, row: y / h, col: x / w });
     }
   return generate(analyze(pixels));
 }
