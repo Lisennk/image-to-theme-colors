@@ -1,5 +1,5 @@
 {
-  "name": "image-to-colors",
+  "name": "image-to-theme-colors",
   "version": "1.0.0",
   "description": "Extract accessible light/dark theme background colors from images",
   "main": "dist/lib/index.js",
@@ -16,13 +16,28 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "dev:server": "ts-node src/dev/server.ts",
-    "dev:validate": "ts-node src/dev/validate.ts",
+    "dev:server": "ts-node -P tsconfig.dev.json src/dev/server.ts",
+    "dev:validate": "ts-node -P tsconfig.dev.json src/dev/validate.ts",
     "prepublishOnly": "npm run build"
   },
-  "keywords": ["image", "color", "theme", "wcag", "contrast", "accessibility", "dark-mode"],
-  "license": "ISC",
+  "keywords": [
+    "image",
+    "color",
+    "theme",
+    "dark-mode",
+    "light-mode",
+    "wcag",
+    "contrast",
+    "accessibility",
+    "background",
+    "palette",
+    "hero-image"
+  ],
+  "license": "MIT",
   "type": "commonjs",
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
     "sharp": "^0.34.5"
   },
