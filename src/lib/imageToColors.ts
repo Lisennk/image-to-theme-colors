@@ -95,6 +95,11 @@ export async function imageToColors(
       const g = data[offset + 1];
       const b = data[offset + 2];
       const hsl = rgbToHsl({ r, g, b });
+      // HSL saturation is unstable at extreme lightness: a 1/255 channel
+      // difference in a near-white pixel produces ~100% S.  Dampen S when
+      // L is within 5% of either end so these pixels read as achromatic.
+      if (hsl.l > 95) hsl.s *= (100 - hsl.l) / 5;
+      else if (hsl.l < 5) hsl.s *= hsl.l / 5;
       pixels.push({ ...hsl, r, g, b, row: y / height, col: x / width });
     }
   }

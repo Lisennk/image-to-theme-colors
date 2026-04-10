@@ -1,6 +1,6 @@
 {
   "name": "image-to-theme-colors",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Extract accessible light/dark theme background colors from images",
   "main": "dist/lib/index.js",
   "types": "dist/lib/index.d.ts",
