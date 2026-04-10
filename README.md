@@ -2,7 +2,7 @@
 
 Extract accessible light and dark theme background colors from any image. Designed for article pages where a hero image transitions into a colored background via a gradient.
 
-Given an image, the algorithm analyzes its color composition and outputs two hex colors — one for a light theme, one for a dark theme — that harmonize with the image and meet WCAG AAA (7:1) contrast requirements against your text colors.
+Given an image, the algorithm analyzes its color composition and outputs background colors and gradients for light and dark themes that harmonize with the image and meet WCAG AAA (7:1) contrast requirements against your text colors.
 
 ![Examples showing light and dark theme colors extracted from four different images](https://raw.githubusercontent.com/Lisennk/image-to-theme-colors/master/assets/examples.png)
 
@@ -20,8 +20,10 @@ Requires Node.js 18+ and [sharp](https://sharp.pixelplumbing.com/) (installed au
 import { imageToColors } from "image-to-theme-colors";
 
 const { light, dark } = await imageToColors("./hero.jpg");
-// light: "#C0D0FF"
-// dark:  "#0F172F"
+// light.color:          "#C0D0FF"
+// light.linearGradient: ["#C0D0FF", "#BAC9F9"]
+// dark.color:           "#0F172F"
+// dark.linearGradient:  ["#0F172F", "#141C36"]
 ```
 
 ## API
@@ -48,8 +50,13 @@ Analyzes an image and returns background colors for light and dark themes.
 
 ```ts
 interface ThemeColors {
-  light: string; // hex, e.g. "#C0D0FF"
-  dark: string;  // hex, e.g. "#0F172F"
+  light: ThemeBackground;
+  dark: ThemeBackground;
+}
+
+interface ThemeBackground {
+  color: string;              // solid background, e.g. "#C0D0FF"
+  linearGradient: [string, string]; // gradient stops, e.g. ["#C0D0FF", "#BAC9F9"]
 }
 ```
 
@@ -62,6 +69,16 @@ const result = await imageToColors(buffer, {
   lightThemeTextColor: "#1A1A1A",
   darkThemeTextColor: "#F0F0F0",
 });
+```
+
+Using the gradient in CSS:
+
+```ts
+const { light } = await imageToColors("./hero.jpg");
+
+element.style.backgroundColor = light.color;
+element.style.backgroundImage =
+  `linear-gradient(to bottom, ${light.linearGradient[0]}, ${light.linearGradient[1]})`;
 ```
 
 From an HTTP upload (Express + multer):

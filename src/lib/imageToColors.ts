@@ -18,12 +18,18 @@ export interface BaseColors {
   dark: string;
 }
 
-/** The output of `imageToColors`: background hex colors for both themes. */
-export interface ThemeColors extends BaseColors {
-  /** Gradient end color for the light theme — slightly deeper than `light`. */
-  lightGradient: string;
-  /** Gradient end color for the dark theme — slightly deeper than `dark`. */
-  darkGradient: string;
+/** Colors for a single theme. */
+export interface ThemeBackground {
+  /** Solid background color (e.g. `"#C0D0FF"`). */
+  color: string;
+  /** Gradient color stops — base color to a slightly deeper variant. */
+  linearGradient: [string, string];
+}
+
+/** The output of `imageToColors`: background colors for light and dark themes. */
+export interface ThemeColors {
+  light: ThemeBackground;
+  dark: ThemeBackground;
 }
 
 /** Optional configuration for `imageToColors`. */
@@ -54,21 +60,14 @@ export interface ImageToColorsOptions {
  *
  * @param input - A file path or Buffer containing the image.
  * @param options - Optional text colors for contrast calculation.
- * @returns An object with `light` and `dark` hex color strings.
+ * @returns An object with `light` and `dark` theme backgrounds, each containing
+ * a solid `color` and a `linearGradient` pair.
  *
  * @example
  * ```ts
  * const { light, dark } = await imageToColors("./hero.jpg");
- * // light: "#C0D0FF", dark: "#0F172F"
- * ```
- *
- * @example
- * ```ts
- * // With custom text colors:
- * const result = await imageToColors(buffer, {
- *   lightThemeTextColor: "#1A1A1A",
- *   darkThemeTextColor: "#F0F0F0",
- * });
+ * // light.color:          "#C0D0FF"
+ * // light.linearGradient: ["#C0D0FF", "#BAC9F9"]
  * ```
  */
 
@@ -140,8 +139,7 @@ export async function imageToColors(
   }
 
   return {
-    ...base,
-    lightGradient: deriveGradient(base.light),
-    darkGradient: deriveGradient(base.dark),
+    light: { color: base.light, linearGradient: [base.light, deriveGradient(base.light)] },
+    dark: { color: base.dark, linearGradient: [base.dark, deriveGradient(base.dark)] },
   };
 }

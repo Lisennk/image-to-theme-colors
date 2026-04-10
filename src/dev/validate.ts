@@ -44,8 +44,8 @@ async function validate() {
     try {
       const result = await imageToColors(imgPath);
 
-      const lp = hexToRgb(result.light), lt = hexToRgb(ex.lightTarget);
-      const dp = hexToRgb(result.dark), dt = hexToRgb(ex.darkTarget);
+      const lp = hexToRgb(result.light.color), lt = hexToRgb(ex.lightTarget);
+      const dp = hexToRgb(result.dark.color), dt = hexToRgb(ex.darkTarget);
 
       const ld = colorDiffPercent(lp, lt);
       const dd = colorDiffPercent(dp, dt);
@@ -61,8 +61,8 @@ async function validate() {
 
       rows.push(
         `${ok ? "✓" : "✗"} Ex ${String(ex.id).padStart(2)}  ` +
-        `L ${result.light} ${ld.toFixed(1).padStart(5)}% |${bar(ld)}| ${lok ? "✓" : "✗"}  ` +
-        `D ${result.dark} ${dd.toFixed(1).padStart(5)}% |${bar(dd)}| ${dok ? "✓" : "✗"}  ` +
+        `L ${result.light.color} ${ld.toFixed(1).padStart(5)}% |${bar(ld)}| ${lok ? "✓" : "✗"}  ` +
+        `D ${result.dark.color} ${dd.toFixed(1).padStart(5)}% |${bar(dd)}| ${dok ? "✓" : "✗"}  ` +
         `AAA:${lcOk ? "✓" : "✗"}${dcOk ? "✓" : "✗"}`
       );
     } catch (err) {
