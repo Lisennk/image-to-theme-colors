@@ -1,6 +1,7 @@
 import sharp from "sharp";
-import { rgbToHsl } from "./color/conversion";
+import { rgbToHsl, hslToRgb, rgbToHex } from "./color/conversion";
 import { hexToRgb } from "./color/conversion";
+import { clamp } from "./util/math";
 import { LIGHT_THEME_TEXT, DARK_THEME_TEXT } from "./color/contrast";
 import { analyzePixels } from "./analysis/analyzePixels";
 import { PixelData } from "./analysis/types";
@@ -11,12 +12,18 @@ import { generateDominantMid } from "./strategy/generateDominantMid";
 import { generateLightBackground } from "./strategy/generateLightBackground";
 import { generateDarkBackground } from "./strategy/generateDarkBackground";
 
-/** The output of `imageToColors`: background hex colors for both themes. */
-export interface ThemeColors {
-  /** Background color for the light theme (e.g. `"#C0D0FF"`). */
+/** Base colors returned by strategy generators (internal). */
+export interface BaseColors {
   light: string;
-  /** Background color for the dark theme (e.g. `"#0F172F"`). */
   dark: string;
+}
+
+/** The output of `imageToColors`: background hex colors for both themes. */
+export interface ThemeColors extends BaseColors {
+  /** Gradient end color for the light theme — slightly deeper than `light`. */
+  lightGradient: string;
+  /** Gradient end color for the dark theme — slightly deeper than `dark`. */
+  darkGradient: string;
 }
 
 /** Optional configuration for `imageToColors`. */
@@ -64,6 +71,15 @@ export interface ImageToColorsOptions {
  * });
  * ```
  */
+
+/** Derive a gradient end color: shift L 2% toward mid-gray and boost S by 5. */
+function deriveGradient(hex: string): string {
+  const hsl = rgbToHsl(hexToRgb(hex));
+  hsl.l += hsl.l < 50 ? 2 : -2;
+  hsl.s = clamp(hsl.s + 5, 0, 100);
+  return rgbToHex(hslToRgb(hsl));
+}
+
 export async function imageToColors(
   input: string | Buffer,
   options?: ImageToColorsOptions
@@ -107,14 +123,25 @@ export async function imageToColors(
   const analysis = analyzePixels(pixels);
   const strategy = pickStrategy(analysis);
 
+  let base: BaseColors;
   switch (strategy) {
     case "achromatic":
-      return generateAchromatic();
+      base = generateAchromatic();
+      break;
     case "dominant_mid":
-      return generateDominantMid(analysis, ctx);
+      base = generateDominantMid(analysis, ctx);
+      break;
     case "light_bg":
-      return generateLightBackground(analysis, ctx);
+      base = generateLightBackground(analysis, ctx);
+      break;
     case "dark_bg":
-      return generateDarkBackground(analysis, ctx);
+      base = generateDarkBackground(analysis, ctx);
+      break;
   }
+
+  return {
+    ...base,
+    lightGradient: deriveGradient(base.light),
+    darkGradient: deriveGradient(base.dark),
+  };
 }

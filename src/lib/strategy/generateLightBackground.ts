@@ -2,7 +2,7 @@ import { ImageAnalysis } from "../analysis/types";
 import { hslToRgb, rgbToHex } from "../color/conversion";
 import { findMinimumLightness, ensureDarkContrast } from "../color/chromaSolvers";
 import { clamp } from "../util/math";
-import { ThemeColors } from "../imageToColors";
+import { BaseColors } from "../imageToColors";
 import { GenerationContext } from "./context";
 
 /**
@@ -15,7 +15,7 @@ import { GenerationContext } from "./context";
 export function generateLightBackground(
   analysis: ImageAnalysis,
   ctx: GenerationContext
-): ThemeColors {
+): BaseColors {
   // If the background is essentially pure white (S < 3), the image is visually
   // achromatic despite possible color noise in dark pixels from compression.
   // Use neutral colors rather than picking up artifacts.

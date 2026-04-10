@@ -3,7 +3,7 @@ import { hslToRgb, rgbToHex } from "../color/conversion";
 import { contrastRatio } from "../color/contrast";
 import { findMinimumLightness, ensureDarkContrast } from "../color/chromaSolvers";
 import { clamp } from "../util/math";
-import { ThemeColors } from "../imageToColors";
+import { BaseColors } from "../imageToColors";
 import { GenerationContext } from "./context";
 
 /**
@@ -15,7 +15,7 @@ import { GenerationContext } from "./context";
 export function generateDarkBackground(
   analysis: ImageAnalysis,
   ctx: GenerationContext
-): ThemeColors {
+): BaseColors {
   let lightHue: number, lightSaturation: number, lightLightness: number;
 
   if (analysis.accentStrength > 0.001 && analysis.accentSaturation > 30) {

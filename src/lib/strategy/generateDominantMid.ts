@@ -2,7 +2,7 @@ import { ImageAnalysis } from "../analysis/types";
 import { hslToRgb, rgbToHex } from "../color/conversion";
 import { solveLightThemeSL, ensureDarkContrast } from "../color/chromaSolvers";
 import { hueDistance, clamp } from "../util/math";
-import { ThemeColors } from "../imageToColors";
+import { BaseColors } from "../imageToColors";
 import { GenerationContext } from "./context";
 
 /**
@@ -15,7 +15,7 @@ import { GenerationContext } from "./context";
 export function generateDominantMid(
   analysis: ImageAnalysis,
   ctx: GenerationContext
-): ThemeColors {
+): BaseColors {
   const bottomHueDiverges =
     hueDistance(analysis.bottomHue, analysis.dominantHue) > 40 &&
     analysis.bottomIsBackground;
