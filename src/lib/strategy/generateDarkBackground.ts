@@ -18,7 +18,7 @@ export function generateDarkBackground(
 ): ThemeColors {
   let lightHue: number, lightSaturation: number, lightLightness: number;
 
-  if (analysis.accentStrength > 0.001 && analysis.accentSaturation > 15) {
+  if (analysis.accentStrength > 0.001 && analysis.accentSaturation > 30) {
     lightHue = analysis.accentHue;
     lightSaturation = analysis.accentStrength > 0.05
       ? clamp(analysis.accentSaturation * 0.6, 15, 80) // large accent → subtle
@@ -29,7 +29,7 @@ export function generateDarkBackground(
     }
   } else {
     lightHue = analysis.dominantHue;
-    lightSaturation = clamp(analysis.dominantSaturation * 0.5, 10, 40);
+    lightSaturation = clamp(analysis.dominantSaturation, 15, 40);
     lightLightness = clamp(findMinimumLightness(lightHue, lightSaturation, ctx.lightText, 9.5), 75, 97);
   }
 
