@@ -77,6 +77,8 @@ export function analyzePixels(pixels: PixelData[]): ImageAnalysis {
   }
 
   // ---- Accent: bright non-dominant pixels, L²-weighted to favor brighter elements ----
+  // Uses a hue histogram to find the strongest accent cluster, avoiding phantom
+  // hues from circular-mean averaging of two opposing hue groups.
   const accentPixels = pixels.filter(
     (px) => px.l > 25 && px.s > 15 && hueDistance(px.h, dominantHue) > 25
   );
@@ -85,14 +87,44 @@ export function analyzePixels(pixels: PixelData[]): ImageAnalysis {
   let accentLightness = 50;
   let accentStrength = 0;
   if (accentPixels.length > 15) {
-    const weights = accentPixels.map((px) => px.s * px.l * px.l);
-    accentHue = circularWeightedMean(accentPixels.map((px) => px.h), weights);
-    const totalWeight = weights.reduce((a, b) => a + b, 0);
-    accentSaturation =
-      weights.reduce((sum, w, i) => sum + accentPixels[i].s * w, 0) / totalWeight;
-    accentLightness =
-      weights.reduce((sum, w, i) => sum + accentPixels[i].l * w, 0) / totalWeight;
-    accentStrength = accentPixels.length / totalPixels;
+    const accentWeights = accentPixels.map((px) => px.s * px.l * px.l);
+
+    // Build a weighted hue histogram to find the strongest accent cluster
+    const accentHistogram = new Float64Array(HUE_BIN_COUNT);
+    for (let i = 0; i < accentPixels.length; i++) {
+      accentHistogram[Math.floor(accentPixels[i].h / 10) % HUE_BIN_COUNT] += accentWeights[i];
+    }
+
+    // Find the peak using a 3-bin sliding window (same approach as dominant hue)
+    let maxAccentWeight = 0;
+    let bestAccentBin = 0;
+    for (let i = 0; i < HUE_BIN_COUNT; i++) {
+      const windowWeight =
+        accentHistogram[(i - 1 + HUE_BIN_COUNT) % HUE_BIN_COUNT] +
+        accentHistogram[i] +
+        accentHistogram[(i + 1) % HUE_BIN_COUNT];
+      if (windowWeight > maxAccentWeight) {
+        maxAccentWeight = windowWeight;
+        bestAccentBin = i;
+      }
+    }
+    const accentPeakHue = bestAccentBin * 10 + 5;
+
+    // Filter to pixels near the peak cluster and compute stats from those only
+    const clusterPixels = accentPixels.filter(
+      (px) => hueDistance(px.h, accentPeakHue) < 25
+    );
+    const clusterWeights = clusterPixels.map((px) => px.s * px.l * px.l);
+
+    if (clusterPixels.length > 5) {
+      accentHue = circularWeightedMean(clusterPixels.map((px) => px.h), clusterWeights);
+      const totalWeight = clusterWeights.reduce((a, b) => a + b, 0);
+      accentSaturation =
+        clusterWeights.reduce((sum, w, i) => sum + clusterPixels[i].s * w, 0) / totalWeight;
+      accentLightness =
+        clusterWeights.reduce((sum, w, i) => sum + clusterPixels[i].l * w, 0) / totalWeight;
+      accentStrength = clusterPixels.length / totalPixels;
+    }
   }
 
   // ---- Bottom-edge hue (last 10% of rows) — the gradient-to-article transition zone ----
