@@ -103,15 +103,17 @@ function renderResults(data) {
   results.innerHTML = "";
   for (const item of data) {
     if (!item.colors) { results.innerHTML += '<div class="empty-state">Error processing ' + esc(item.name) + "</div>"; continue; }
+    const lightBg = item.colors.themes.light.body.background.color;
+    const darkBg = item.colors.themes.dark.body.background.color;
     const g = document.createElement("div");
     g.className = "image-group";
     g.innerHTML =
       '<h2>' + esc(item.name) +
-      ' <span class="swatch" style="background:' + item.colors.light + '"></span> ' + item.colors.light +
-      ' <span class="swatch" style="background:' + item.colors.dark + '"></span> ' + item.colors.dark + '</h2>' +
+      ' <span class="swatch" style="background:' + lightBg + '"></span> ' + lightBg +
+      ' <span class="swatch" style="background:' + darkBg + '"></span> ' + darkBg + '</h2>' +
       '<div class="previews">' +
-      card(item.dataUrl, item.colors.light, "#2A2925", "Light", item.colors.light) +
-      card(item.dataUrl, item.colors.dark, "#FFFFFF", "Dark", item.colors.dark) +
+      card(item.dataUrl, lightBg, "#2A2925", "Light", lightBg) +
+      card(item.dataUrl, darkBg, "#FFFFFF", "Dark", darkBg) +
       "</div>";
     results.appendChild(g);
   }

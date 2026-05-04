@@ -43,9 +43,11 @@ async function validate() {
     const imgPath = path.resolve(__dirname, "../../examples", ex.image);
     try {
       const result = await imageToColors(imgPath);
+      const lightHex = result.themes.light.body.background.color;
+      const darkHex = result.themes.dark.body.background.color;
 
-      const lp = hexToRgb(result.light.color), lt = hexToRgb(ex.lightTarget);
-      const dp = hexToRgb(result.dark.color), dt = hexToRgb(ex.darkTarget);
+      const lp = hexToRgb(lightHex), lt = hexToRgb(ex.lightTarget);
+      const dp = hexToRgb(darkHex), dt = hexToRgb(ex.darkTarget);
 
       const ld = colorDiffPercent(lp, lt);
       const dd = colorDiffPercent(dp, dt);
@@ -61,8 +63,8 @@ async function validate() {
 
       rows.push(
         `${ok ? "✓" : "✗"} Ex ${String(ex.id).padStart(2)}  ` +
-        `L ${result.light.color} ${ld.toFixed(1).padStart(5)}% |${bar(ld)}| ${lok ? "✓" : "✗"}  ` +
-        `D ${result.dark.color} ${dd.toFixed(1).padStart(5)}% |${bar(dd)}| ${dok ? "✓" : "✗"}  ` +
+        `L ${lightHex} ${ld.toFixed(1).padStart(5)}% |${bar(ld)}| ${lok ? "✓" : "✗"}  ` +
+        `D ${darkHex} ${dd.toFixed(1).padStart(5)}% |${bar(dd)}| ${dok ? "✓" : "✗"}  ` +
         `AAA:${lcOk ? "✓" : "✗"}${dcOk ? "✓" : "✗"}`
       );
     } catch (err) {

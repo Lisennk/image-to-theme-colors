@@ -81,3 +81,59 @@ export function solveLightThemeSL(
   }
   return { saturation: s, lightness: l };
 }
+
+/**
+ * Binary-search for the maximum lightness at which an HSL color still has
+ * at least `targetRatio` contrast against a *lighter* reference color.
+ *
+ * Used for light-theme card surfaces sitting on a brighter feed background:
+ * we want the card as light as possible while remaining distinguishable.
+ */
+export function findMaxLightnessAgainstLighter(
+  hue: number,
+  saturation: number,
+  lighterRef: RGB,
+  targetRatio: number,
+  lo: number = 50,
+  hi: number = 99
+): number {
+  let low = lo;
+  let high = hi;
+  for (let i = 0; i < 60; i++) {
+    const mid = (low + high) / 2;
+    if (contrastRatio(hslToRgb({ h: hue, s: saturation, l: mid }), lighterRef) >= targetRatio) {
+      low = mid;
+    } else {
+      high = mid;
+    }
+  }
+  return low;
+}
+
+/**
+ * Binary-search for the minimum lightness at which an HSL color still has
+ * at least `targetRatio` contrast against a *darker* reference color.
+ *
+ * Used for dark-theme card surfaces sitting on a near-black feed background:
+ * we want the card as dark as possible while remaining distinguishable.
+ */
+export function findMinLightnessAgainstDarker(
+  hue: number,
+  saturation: number,
+  darkerRef: RGB,
+  targetRatio: number,
+  lo: number = 1,
+  hi: number = 50
+): number {
+  let low = lo;
+  let high = hi;
+  for (let i = 0; i < 60; i++) {
+    const mid = (low + high) / 2;
+    if (contrastRatio(hslToRgb({ h: hue, s: saturation, l: mid }), darkerRef) >= targetRatio) {
+      high = mid;
+    } else {
+      low = mid;
+    }
+  }
+  return high;
+}

@@ -1,6 +1,6 @@
 {
   "name": "image-to-theme-colors",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "Extract accessible light/dark theme background colors from images",
   "main": "dist/lib/index.js",
   "types": "dist/lib/index.d.ts",
@@ -17,6 +17,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev:server": "ts-node -P tsconfig.dev.json src/dev/server.ts",
+    "dev:demo": "ts-node -P tsconfig.dev.json src/dev/cardDemo.ts",
     "dev:validate": "ts-node -P tsconfig.dev.json src/dev/validate.ts",
     "prepublishOnly": "npm run build"
   },

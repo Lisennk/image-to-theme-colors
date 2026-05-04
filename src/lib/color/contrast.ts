@@ -33,3 +33,9 @@ export const LIGHT_THEME_TEXT = hexToRgb("#2A2925");
 
 /** Normal text color for the dark theme. */
 export const DARK_THEME_TEXT = hexToRgb("#FFFFFF");
+
+/** Default feed (page) background behind a card on the light theme. */
+export const LIGHT_FEED_BG = hexToRgb("#F0F0F0");
+
+/** Default feed (page) background behind a card on the dark theme. */
+export const DARK_FEED_BG = hexToRgb("#110F0E");
