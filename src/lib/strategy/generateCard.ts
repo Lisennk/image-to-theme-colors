@@ -8,18 +8,14 @@ import {
 } from "../color/chromaSolvers";
 import { clamp } from "../util/math";
 
-/** Card colors for one theme: surface gradient, content/icon color, fixed text colors. */
+/** Card colors for one theme: surface gradient and content/icon color. */
 export interface CardTheme {
   background: {
-    color: string;
+    baseColor: string;
     linearGradient: [string, string];
   };
   content: {
-    color: string;
-  };
-  text: {
-    title: string;
-    subtitle: string;
+    accentColor: string;
   };
 }
 
@@ -171,9 +167,7 @@ function generateLightCard(
   bodyDark: HSL,
   lightFeedBg: RGB,
   titleRef: RGB,
-  subtitleRef: RGB,
-  titleHex: string,
-  subtitleHex: string
+  subtitleRef: RGB
 ): CardTheme {
   const hue = bodyLight.h;
   const achromatic = isAchromatic(bodyLight);
@@ -208,11 +202,10 @@ function generateLightCard(
 
   return {
     background: {
-      color: rgbToHex(startRgb),
+      baseColor: rgbToHex(startRgb),
       linearGradient: [rgbToHex(startRgb), rgbToHex(hslToRgb(end))],
     },
-    content: { color: rgbToHex(hslToRgb(content)) },
-    text: { title: titleHex, subtitle: subtitleHex },
+    content: { accentColor: rgbToHex(hslToRgb(content)) },
   };
 }
 
@@ -221,9 +214,7 @@ function generateDarkCard(
   bodyDark: HSL,
   darkFeedBg: RGB,
   titleRef: RGB,
-  subtitleRef: RGB,
-  titleHex: string,
-  subtitleHex: string
+  subtitleRef: RGB
 ): CardTheme {
   const hue = bodyDark.h;
   const achromatic = isAchromatic(bodyDark);
@@ -256,18 +247,17 @@ function generateDarkCard(
 
   return {
     background: {
-      color: rgbToHex(startRgb),
+      baseColor: rgbToHex(startRgb),
       linearGradient: [rgbToHex(startRgb), rgbToHex(hslToRgb(end))],
     },
-    content: { color: rgbToHex(hslToRgb(content)) },
-    text: { title: titleHex, subtitle: subtitleHex },
+    content: { accentColor: rgbToHex(hslToRgb(content)) },
   };
 }
 
 /**
- * Build card colors (background gradient + content color + fixed text colors)
- * for both themes, using the body output as the hue source and the feed
- * backgrounds + text colors as contrast references.
+ * Build card colors (background gradient + content color) for both themes,
+ * using the body output as the hue source and the feed backgrounds + text
+ * colors as contrast references.
  */
 export function generateCardThemes(
   bodyLightHex: string,
@@ -282,15 +272,10 @@ export function generateCardThemes(
   const lightHsl = rgbToHsl(hexToRgb(bodyLightHex));
   const darkHsl = rgbToHsl(hexToRgb(bodyDarkHex));
 
-  const lightTitleHex = lightTitle ?? "#2A2925";
-  const lightSubtitleHex = lightSubtitle ?? "#51504D";
-  const darkTitleHex = darkTitle ?? "#FCFCFC";
-  const darkSubtitleHex = darkSubtitle ?? "#A09F9E";
-
-  const lightTitleRgb = hexToRgb(lightTitleHex);
-  const lightSubtitleRgb = hexToRgb(lightSubtitleHex);
-  const darkTitleRgb = hexToRgb(darkTitleHex);
-  const darkSubtitleRgb = hexToRgb(darkSubtitleHex);
+  const lightTitleRgb = hexToRgb(lightTitle ?? "#2A2925");
+  const lightSubtitleRgb = hexToRgb(lightSubtitle ?? "#51504D");
+  const darkTitleRgb = hexToRgb(darkTitle ?? "#FCFCFC");
+  const darkSubtitleRgb = hexToRgb(darkSubtitle ?? "#A09F9E");
 
   return {
     light: generateLightCard(
@@ -298,18 +283,14 @@ export function generateCardThemes(
       darkHsl,
       lightFeedBg ?? LIGHT_FEED_BG,
       lightTitleRgb,
-      lightSubtitleRgb,
-      lightTitleHex,
-      lightSubtitleHex
+      lightSubtitleRgb
     ),
     dark: generateDarkCard(
       lightHsl,
       darkHsl,
       darkFeedBg ?? DARK_FEED_BG,
       darkTitleRgb,
-      darkSubtitleRgb,
-      darkTitleHex,
-      darkSubtitleHex
+      darkSubtitleRgb
     ),
   };
 }

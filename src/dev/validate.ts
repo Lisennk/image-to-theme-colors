@@ -43,8 +43,8 @@ async function validate() {
     const imgPath = path.resolve(__dirname, "../../examples", ex.image);
     try {
       const result = await imageToColors(imgPath);
-      const lightHex = result.themes.light.body.background.color;
-      const darkHex = result.themes.dark.body.background.color;
+      const lightHex = result.themes.light.body.background.baseColor;
+      const darkHex = result.themes.dark.body.background.baseColor;
 
       const lp = hexToRgb(lightHex), lt = hexToRgb(ex.lightTarget);
       const dp = hexToRgb(darkHex), dt = hexToRgb(ex.darkTarget);

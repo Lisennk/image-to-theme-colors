@@ -9,8 +9,7 @@ Given an image, the algorithm analyzes its color composition and outputs:
 
 - `body.background` — solid color and gradient for the open-state article background, with WCAG AAA (7:1) contrast against your text colors.
 - `card.background` — solid color and gradient for the feed card surface, with sufficient contrast against your feed background (1.15:1 light, 1.12:1 dark).
-- `card.content` — color for circular controls / icons sitting on the card, with WCAG AA (4.5:1) contrast against the card surface.
-- `card.text` — title (AAA / 7:1) and subtitle (6:1) text colors echoed back from the inputs.
+- `card.content.accentColor` — color for circular controls / icons sitting on the card, with WCAG AA (4.5:1) contrast against the card surface.
 
 …all on a shared hue per theme so the body, card, icon, and text read as one color family.
 
@@ -30,14 +29,12 @@ Requires Node.js 18+ and [sharp](https://sharp.pixelplumbing.com/) (installed au
 import { imageToColors } from "image-to-theme-colors";
 
 const result = await imageToColors("./hero.jpg");
-// result.themes.light.body.background.color           "#C0D0FF"
+// result.themes.light.body.background.baseColor       "#C0D0FF"
 // result.themes.light.body.background.linearGradient  ["#C0D0FF", "#BAC9F9"]
-// result.themes.light.card.background.color           "#D5E2ED"
+// result.themes.light.card.background.baseColor       "#D5E2ED"
 // result.themes.light.card.background.linearGradient  ["#D5E2ED", "#B2CADD"]
-// result.themes.light.card.content.color              "#4F6678"
-// result.themes.light.card.text.title                 "#2A2925"
-// result.themes.light.card.text.subtitle              "#51504D"
-// result.themes.dark.body.background.color            "#0F172F"
+// result.themes.light.card.content.accentColor        "#4F6678"
+// result.themes.dark.body.background.baseColor        "#0F172F"
 // …
 ```
 
@@ -81,13 +78,12 @@ interface ThemeColors {
   body: { background: BackgroundColors };
   card: {
     background: BackgroundColors;
-    content: { color: string };
-    text: { title: string; subtitle: string };
+    content: { accentColor: string };
   };
 }
 
 interface BackgroundColors {
-  color: string;                     // solid background, e.g. "#C0D0FF"
+  baseColor: string;                 // base color / first gradient stop, e.g. "#C0D0FF"
   linearGradient: [string, string];  // gradient stops, e.g. ["#C0D0FF", "#BAC9F9"]
 }
 ```
@@ -111,17 +107,17 @@ Using the gradient in CSS:
 const { light } = (await imageToColors("./hero.jpg")).themes;
 
 // open-state body
-articleEl.style.backgroundColor = light.body.background.color;
+articleEl.style.backgroundColor = light.body.background.baseColor;
 articleEl.style.backgroundImage =
   `linear-gradient(to bottom, ${light.body.background.linearGradient[0]}, ${light.body.background.linearGradient[1]})`;
 
 // feed card
-cardEl.style.backgroundColor = light.card.background.color;
+cardEl.style.backgroundColor = light.card.background.baseColor;
 cardEl.style.backgroundImage =
   `linear-gradient(to bottom, ${light.card.background.linearGradient[0]}, ${light.card.background.linearGradient[1]})`;
 
 // like button on the card
-likeBtnEl.style.color = light.card.content.color;
+likeBtnEl.style.color = light.card.content.accentColor;
 ```
 
 From an HTTP upload (Express + multer):
@@ -153,8 +149,7 @@ The algorithm runs in four phases:
 **4. Color generation** — Produces the body colors using chroma-preserving lightness adjustment, iterative S/L co-solving, and WCAG AAA contrast enforcement, then derives the card colors from the body's hue:
 
 - **Card background:** the lightest tint (light theme) / darkest shade (dark theme) that still clears the feed-background contrast budget *and* the title (7:1) + subtitle (6:1) contrast budgets. If those constraints conflict (text-readability requires a card too close in luminance to the feed bg), text wins and feed contrast may dip below its budget.
-- **Card content:** the same hue at the opposite end of the L scale, sized to clear AA (4.5:1) icon contrast against the card surface.
-- **Card text:** the configured title and subtitle hex values are echoed back as `card.text.{title, subtitle}` so consumers don't need to thread defaults manually.
+- **Card content (`accentColor`):** the same hue at the opposite end of the L scale, sized to clear AA (4.5:1) icon contrast against the card surface.
 
 ### Design decisions
 

@@ -26,8 +26,8 @@ export interface BaseColors {
 
 /** A solid color plus a two-stop linear gradient on the same hue. */
 export interface BackgroundColors {
-  /** Solid background color (e.g. `"#C0D0FF"`). */
-  color: string;
+  /** Base color — also the first stop of `linearGradient` (e.g. `"#C0D0FF"`). */
+  baseColor: string;
   /** Gradient color stops — base color to a slightly deeper variant. */
   linearGradient: [string, string];
 }
@@ -122,16 +122,17 @@ export interface ImageToColorsOptions {
  * @example
  * ```ts
  * const result = await imageToColors("./hero.jpg");
- * // result.themes.light.body.background.color           "#C0D0FF"
- * // result.themes.light.card.background.color           "#D5E2ED"
- * // result.themes.light.card.content.color              "#4F6678"
+ * // result.themes.light.body.background.baseColor       "#C0D0FF"
+ * // result.themes.light.card.background.baseColor       "#D5E2ED"
+ * // result.themes.light.card.content.accentColor        "#4F6678"
  * ```
  */
 
-/** Derive a gradient end color: shift L 2% toward mid-gray and boost S by 5. */
+/** Derive a gradient end color: shift L 2% away from mid-gray and boost S by 5. */
 function deriveGradient(hex: string): string {
   const hsl = rgbToHsl(hexToRgb(hex));
-  hsl.l += hsl.l < 50 ? 2 : -2;
+  hsl.l += hsl.l < 50 ? -2 : 2;
+  hsl.l = clamp(hsl.l, 0, 100);
   hsl.s = clamp(hsl.s + 5, 0, 100);
   return rgbToHex(hslToRgb(hsl));
 }
@@ -217,7 +218,7 @@ export async function imageToColors(
       light: {
         body: {
           background: {
-            color: base.light,
+            baseColor: base.light,
             linearGradient: [base.light, deriveGradient(base.light)],
           },
         },
@@ -226,7 +227,7 @@ export async function imageToColors(
       dark: {
         body: {
           background: {
-            color: base.dark,
+            baseColor: base.dark,
             linearGradient: [base.dark, deriveGradient(base.dark)],
           },
         },
