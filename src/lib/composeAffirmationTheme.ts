@@ -1,4 +1,4 @@
-import { clamp } from "./util/math";
+import { clamp, percentile } from "./util/math";
 import { extractPixels } from "./analysis/extractPixels";
 import { summarizeRegion } from "./analysis/summarizeRegion";
 import { decideDirections } from "./strategy/affirmation/decideDirections";
@@ -105,6 +105,20 @@ const ACCENT_AREA_ROW_MIN = 0.88;
 const LOCAL_OVERRIDE_L_DIFF = 30;
 
 /**
+ * Mixed-content trigger: when the local control area's *darker
+ * quartile* (p25 L) diverges from the broader region's medL by more
+ * than this, the area mixes a dark sub-feature with brighter
+ * surroundings — the median is misleading because the actual control
+ * may sit over the darker sub-region (e.g. a tag pill rendered over
+ * the dark hair of a portrait, with brighter sky filling the rest of
+ * the bounding box).
+ *
+ * Validation set max p25-divergence = 12. The woman+red-bar edge case
+ * is 34. Threshold of 25 separates them.
+ */
+const LOCAL_OVERRIDE_L_DIFF_P25 = 25;
+
+/**
  * Wrap a `(label, accent)` pair in the dual-theme shape. Affirmation
  * overlays don't change with theme, so light and dark share the same
  * values — the wrap exists for API parity with `composeArticleTheme`.
@@ -202,10 +216,43 @@ export async function composeAffirmationTheme(
   const accentAreaSummary = summarizeRegion(
     accentAreaPixels.length >= MIN_REGION_PIXELS ? accentAreaPixels : pixels
   );
+  // Two override triggers per region:
+  //  - medL diff > 30: a uniformly different patch sits under the control
+  //    (e.g. dark navy block on cream background, image fully dominated by
+  //    that patch within the area).
+  //  - p25 diff > 25: the local area MIXES a dark sub-feature with brighter
+  //    surroundings (or vice versa). The median looks ok but the darker
+  //    quartile — where the actual control may render — is far from the
+  //    broader region's character.
+  const labelP25L =
+    labelAreaPixels.length >= MIN_REGION_PIXELS
+      ? percentile(labelAreaPixels.map((p) => p.l), 0.25)
+      : labelAreaSummary.medL;
+  const accentP25L =
+    accentAreaPixels.length >= MIN_REGION_PIXELS
+      ? percentile(accentAreaPixels.map((p) => p.l), 0.25)
+      : accentAreaSummary.medL;
+  // Solid-vivid-midL: the local control area is a single saturated
+  // color (no L variance, near-max avgS) sitting at a mid lightness
+  // (L ≈ 40–60) — the worst case for in-hue contrast. A darker version
+  // of the same hue can't reach AA against the bg, so the override
+  // lets pickColor's solid-vivid achromatic branch fire. Restricted
+  // to mid-L cluster so vivid-bright regions like aff#12's L≈70
+  // orange smoke (where in-hue darker DOES clear) aren't caught.
+  const isSolidVividMidL = (s: typeof labelAreaSummary): boolean =>
+    s.avgS > 90 &&
+    Math.abs(s.clusterTopL - s.clusterDarkL) < 5 &&
+    s.clusterDarkL >= 40 &&
+    s.clusterTopL <= 60;
+
   const labelOverride =
-    Math.abs(labelAreaSummary.medL - topSummary.medL) > LOCAL_OVERRIDE_L_DIFF;
+    Math.abs(labelAreaSummary.medL - topSummary.medL) > LOCAL_OVERRIDE_L_DIFF ||
+    Math.abs(labelP25L - topSummary.medL) > LOCAL_OVERRIDE_L_DIFF_P25 ||
+    (isSolidVividMidL(labelAreaSummary) && !isSolidVividMidL(topSummary));
   const accentOverride =
-    Math.abs(accentAreaSummary.medL - botSummary.medL) > LOCAL_OVERRIDE_L_DIFF;
+    Math.abs(accentAreaSummary.medL - botSummary.medL) > LOCAL_OVERRIDE_L_DIFF ||
+    Math.abs(accentP25L - botSummary.medL) > LOCAL_OVERRIDE_L_DIFF_P25 ||
+    (isSolidVividMidL(accentAreaSummary) && !isSolidVividMidL(botSummary));
 
   const directions = decideDirections(topSummary, botSummary, combinedSummary);
 
@@ -216,6 +263,13 @@ export async function composeAffirmationTheme(
   if (labelOverride || accentOverride) {
     const labelSolveSummary = labelOverride ? labelAreaSummary : topSummary;
     const accentSolveSummary = accentOverride ? accentAreaSummary : botSummary;
+    // Direction uses the local area's median L. The pill's *visible*
+    // backdrop (what the eye sees through 15% labelColor + backdrop
+    // blur) is a smear of the area's pixels — close to the median, not
+    // the darkest or brightest. Solving against the median produces a
+    // color with good contrast against that smeared average, which
+    // reads cleanly even when the underlying mixes dark and bright
+    // pixels.
     const labelDir: "lighter" | "darker" = labelOverride
       ? labelAreaSummary.medL >= 50 ? "darker" : "lighter"
       : directions.tag;

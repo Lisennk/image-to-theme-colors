@@ -236,11 +236,31 @@ export function pickColor(
   mode: PickMode,
   ctx: PickColorContext = {}
 ): string {
-  // Image-9 achromatic-bright case.
+  // Image-9 achromatic-bright case (vivid bright field with white speckles).
   if (
     direction === "darker" &&
     summary.avgS > 80 &&
     summary.whiteFraction > 0.10
+  ) {
+    return rgbToHex(hslToRgb({ h: summary.dominantHue, s: 0, l: 20 }));
+  }
+
+  // Solid-vivid-midL case: the region is essentially a single
+  // saturated color (cluster L spread near zero, near-max avgS — e.g.
+  // a solid red bar) sitting at a mid lightness (L ≈ 40–60). At that
+  // L, no in-hue darker color clears AA against pure bright color, so
+  // we drop to achromatic dark for max-contrast readability.
+  //
+  // The mid-L bracket prevents this from firing on vivid-bright regions
+  // like aff#12's orange smoke (cluster L ≈ 70, where in-hue darker DOES
+  // have contrast headroom against the bg).
+  const clusterLSpread = Math.abs(summary.clusterTopL - summary.clusterDarkL);
+  if (
+    direction === "darker" &&
+    summary.avgS > 90 &&
+    clusterLSpread < 5 &&
+    summary.clusterDarkL >= 40 &&
+    summary.clusterTopL <= 60
   ) {
     return rgbToHex(hslToRgb({ h: summary.dominantHue, s: 0, l: 20 }));
   }
