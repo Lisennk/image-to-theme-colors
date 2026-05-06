@@ -138,6 +138,12 @@ interface BodyContent {
 interface CardTheme {
   background: BackgroundColors;
   content: {
+    /**
+     * Category label on the feed card surface. Same value as
+     * `accentColor` — exposed under the label name for semantic
+     * clarity when styling a text label rather than an icon.
+     */
+    labelColor: string;
     /** Circular control on the feed card. = body.content.labelColor. */
     accentColor: string;
   };

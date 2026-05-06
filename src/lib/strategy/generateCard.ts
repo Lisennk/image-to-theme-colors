@@ -147,7 +147,7 @@ function generateLightCard(
       baseColor: rgbToHex(startRgb),
       linearGradient: [rgbToHex(startRgb), rgbToHex(hslToRgb(end))],
     },
-    content: { accentColor: contentAccent },
+    content: { labelColor: contentAccent, accentColor: contentAccent },
   };
 }
 
@@ -179,7 +179,7 @@ function generateDarkCard(
       baseColor: rgbToHex(startRgb),
       linearGradient: [rgbToHex(startRgb), rgbToHex(hslToRgb(end))],
     },
-    content: { accentColor: contentAccent },
+    content: { labelColor: contentAccent, accentColor: contentAccent },
   };
 }
 

@@ -81,6 +81,15 @@ export interface CardTheme {
   background: BackgroundColors;
   content: {
     /**
+     * Color of a small category label sitting on the feed card
+     * surface. Identical to `accentColor` (both reuse
+     * `body.content.labelColor`) — exposed under the label name for
+     * semantic clarity at call sites that style a text label rather
+     * than an icon. Same hue family as the card surface, AA (4.5:1)
+     * contrast.
+     */
+    labelColor: string;
+    /**
      * Color of the circular control on the feed card (e.g. like
      * button). Reuses `body.content.labelColor` so the open-state and
      * feed-state palettes stay coherent; AA (4.5:1) against the card
