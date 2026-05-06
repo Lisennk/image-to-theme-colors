@@ -77,6 +77,34 @@ export interface AffirmationThemeOptions {
 const MIN_REGION_PIXELS = 80;
 
 /**
+ * Bounding box (as image-relative fractions) for the area where the tag
+ * pill actually sits on the affirmation card UI: top-left, ~12% of the
+ * image height, ~55% of the width.
+ */
+const LABEL_AREA_ROW_MAX = 0.12;
+const LABEL_AREA_COL_MAX = 0.55;
+/**
+ * Bounding box for the area where the circular icons actually sit:
+ * a strip across the bottom 12% of the image, full width.
+ */
+const ACCENT_AREA_ROW_MIN = 0.88;
+
+/**
+ * If the medL of the actual control area diverges from the broader
+ * top/bottom region by more than this many points, the image has a
+ * local feature (e.g. a small dark patch) sitting exactly under the
+ * control. The broader-region color solve would average that feature
+ * out and produce a low-contrast color at the actual control position,
+ * so we override to solve against the local area instead.
+ *
+ * Calibrated against the validation set (max observed broad/local L
+ * diff = 7) and the dark-patch-under-label edge case (diff = 75). A
+ * threshold of 30 sits well above any validation diff, guaranteeing
+ * no regression.
+ */
+const LOCAL_OVERRIDE_L_DIFF = 30;
+
+/**
  * Wrap a `(label, accent)` pair in the dual-theme shape. Affirmation
  * overlays don't change with theme, so light and dark share the same
  * values — the wrap exists for API parity with `composeArticleTheme`.
@@ -159,7 +187,50 @@ export async function composeAffirmationTheme(
     topThinPixels.length >= MIN_REGION_PIXELS / 2 ? topThinPixels : pixels
   );
 
+  // Local-area summaries: the actual bounding boxes of the controls on
+  // the affirmation card. Used to detect the case where the broader
+  // top/bottom region averages out a small feature that sits *exactly*
+  // under the control — e.g. a small dark patch under the label that
+  // would render the broader-region label color unreadable in place.
+  const labelAreaPixels = pixels.filter(
+    (px) => px.row < LABEL_AREA_ROW_MAX && px.col < LABEL_AREA_COL_MAX
+  );
+  const accentAreaPixels = pixels.filter((px) => px.row > ACCENT_AREA_ROW_MIN);
+  const labelAreaSummary = summarizeRegion(
+    labelAreaPixels.length >= MIN_REGION_PIXELS ? labelAreaPixels : pixels
+  );
+  const accentAreaSummary = summarizeRegion(
+    accentAreaPixels.length >= MIN_REGION_PIXELS ? accentAreaPixels : pixels
+  );
+  const labelOverride =
+    Math.abs(labelAreaSummary.medL - topSummary.medL) > LOCAL_OVERRIDE_L_DIFF;
+  const accentOverride =
+    Math.abs(accentAreaSummary.medL - botSummary.medL) > LOCAL_OVERRIDE_L_DIFF;
+
   const directions = decideDirections(topSummary, botSummary, combinedSummary);
+
+  // Local-override path: the broader region's character doesn't match
+  // what's actually under the control. Solve each control independently
+  // against its own local area, with a fresh local direction, and emit
+  // potentially-different label and accent colors.
+  if (labelOverride || accentOverride) {
+    const labelSolveSummary = labelOverride ? labelAreaSummary : topSummary;
+    const accentSolveSummary = accentOverride ? accentAreaSummary : botSummary;
+    const labelDir: "lighter" | "darker" = labelOverride
+      ? labelAreaSummary.medL >= 50 ? "darker" : "lighter"
+      : directions.tag;
+    const accentDir: "lighter" | "darker" = accentOverride
+      ? accentAreaSummary.medL >= 50 ? "darker" : "lighter"
+      : directions.icon;
+    const labelColor = pickColor(labelSolveSummary, labelDir, "split", {
+      combined: combinedSummary,
+      topThin: topThinSummary,
+    });
+    const accentColor = pickColor(accentSolveSummary, accentDir, "split", {
+      combined: combinedSummary,
+    });
+    return wrapTheme(labelColor, accentColor);
+  }
 
   if (directions.mode === "uniform") {
     const color = pickColor(topSummary, directions.tag, "uniform", {
