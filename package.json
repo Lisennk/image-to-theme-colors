@@ -1,6 +1,6 @@
 {
   "name": "image-to-theme-colors",
-  "version": "4.1.0",
+  "version": "4.2.0",
   "description": "Compose accessible UI themes (article body/card + affirmation overlays) from any image",
   "main": "dist/lib/index.js",
   "types": "dist/lib/index.d.ts",
