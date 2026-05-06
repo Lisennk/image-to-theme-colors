@@ -5,26 +5,47 @@ import { PixelData } from "./analysis/types";
 import { RGB } from "./color/types";
 
 /**
- * Output of `predictForAffirmation`. Affirmation cards have a fixed
- * structure (image + tag at top + circular icons at bottom), so the
- * prediction is a flat pair of hex colors.
+ * Colors for the affirmation card's overlay elements in one theme.
+ *
+ * The two fields mirror the roles of the article API:
+ *  - `labelColor` is the small category label at the top of the card
+ *    (e.g. "Motivation phrase") — same role as
+ *    `ArticleTheme.themes.{light,dark}.body.content.labelColor`.
+ *  - `accentColor` is the circular controls at the bottom (Share,
+ *    Bookmark, More) — same role as
+ *    `ArticleTheme.themes.{light,dark}.card.content.accentColor`.
  */
-export interface PredictForAffirmationResult {
-  /**
-   * Hex color (e.g. `"#B0C1E8"`) for the small category tag pinned at the
-   * top of the affirmation card (e.g. "Motivation phrase"). Solved against
-   * the image's top region.
-   */
-  tagColor: string;
-  /**
-   * Hex color for the circular control icons (Share, Bookmark, More) at
-   * the bottom of the card. Solved against the image's bottom region.
-   */
-  iconColor: string;
+export interface AffirmationThemeColors {
+  content: {
+    /**
+     * Hex color (e.g. `"#B0C1E8"`) for the category label pinned at the
+     * top of the card. Solved against the image's top region.
+     */
+    labelColor: string;
+    /**
+     * Hex color for the circular control icons at the bottom of the
+     * card. Solved against the image's bottom region.
+     */
+    accentColor: string;
+  };
 }
 
-/** Optional configuration for `predictForAffirmation`. */
-export interface PredictForAffirmationOptions {
+/**
+ * Output of `composeAffirmationTheme`. Wraps in `themes.{light,dark}`
+ * to match `ArticleTheme`'s shape so callers can treat both APIs
+ * uniformly. Affirmation cards aren't theme-aware — the image itself
+ * is the same in light and dark modes — so `light` and `dark` carry
+ * identical values.
+ */
+export interface AffirmationTheme {
+  themes: {
+    light: AffirmationThemeColors;
+    dark: AffirmationThemeColors;
+  };
+}
+
+/** Optional configuration for `composeAffirmationTheme`. */
+export interface AffirmationThemeOptions {
   /**
    * Fraction of the image height (0–1) treated as the "top region" — the
    * area underneath the tag. Defaults to `0.25`. Lower values sample a
@@ -538,40 +559,41 @@ async function extractPixels(input: string | Buffer): Promise<PixelData[]> {
 const MIN_REGION_PIXELS = 80;
 
 /**
- * Predict the tag and circular-icons colors for an affirmation card.
+ * Compose the overlay theme (label + accent) for an affirmation card.
  *
- * The card has the image as backdrop with a category tag pinned to the
- * top and circular controls at the bottom. The algorithm samples top and
- * bottom regions, decides whether the image is split (sky/ground) or
- * uniform, and picks a color whose hue mirrors the dominant cluster of
- * the relevant region and whose L sits ~47 points away from the region's
- * avg-RGB lightness.
+ * The card has the image as backdrop with a category label pinned to
+ * the top and circular controls at the bottom. The algorithm samples
+ * top and bottom regions, decides whether the image is split (sky over
+ * ground) or uniform, and picks a color whose hue mirrors the dominant
+ * cluster of the relevant region and whose L sits ~47 points away from
+ * the region's avg-RGB lightness.
  *
- * Uniform mode bases the color on the *top* region (where the tag sits)
- * and emits the same color for both controls. Split mode solves each
- * region independently.
+ * Uniform mode bases the color on the *top* region (where the label
+ * sits) and emits the same color for both label and accent. Split mode
+ * solves each independently.
  *
  * For pathological inputs (extreme aspect ratios, tiny images) where
- * either region falls below `MIN_REGION_PIXELS`, the algorithm collapses
- * to uniform mode against the combined-image summary so the output is a
- * single sensible color rather than a split decision based on a
- * too-sparse histogram.
+ * either region falls below `MIN_REGION_PIXELS`, the algorithm
+ * collapses to uniform mode against the combined-image summary so the
+ * output is a single sensible color rather than a split decision based
+ * on a too-sparse histogram.
  *
  * @param input    File path or image buffer.
  * @param options  Optional region-fraction overrides for non-default
  *                 card geometries.
- * @returns        `tagColor` and `iconColor` as hex strings.
+ * @returns        Light/dark themes (identical values) with `content.
+ *                 labelColor` and `content.accentColor`.
  */
-export async function predictForAffirmation(
+export async function composeAffirmationTheme(
   input: string | Buffer,
-  options?: PredictForAffirmationOptions
-): Promise<PredictForAffirmationResult> {
+  options?: AffirmationThemeOptions
+): Promise<AffirmationTheme> {
   const topFraction = clamp(options?.topRegionFraction ?? 0.25, 0.05, 0.5);
   const botFraction = clamp(options?.bottomRegionFraction ?? 0.25, 0.05, 0.5);
-  // Thin band is a fixed fraction of the top region — when the tag area
-  // mixes two color zones, the very-top sliver typically holds the
-  // cleaner dominant. Scaling it relative to the top fraction keeps the
-  // ratio consistent across custom geometries.
+  // Thin band is a fixed fraction of the top region — when the label
+  // area mixes two color zones, the very-top sliver typically holds
+  // the cleaner dominant. Scaling it relative to the top fraction
+  // keeps the ratio consistent across custom geometries.
   const thinFraction = topFraction * 0.48;
 
   const pixels = await extractPixels(input);
@@ -581,10 +603,21 @@ export async function predictForAffirmation(
 
   const combinedSummary = summarizeRegion(pixels);
 
-  // Pathological-input guard: if either region is too small to summarize
-  // reliably, fall back to a single combined-summary color for both
-  // controls. The validation cards (150×150 → 5625 pixels per default
-  // 25% region) never trip this branch.
+  // Wrap a `(labelColor, accentColor)` pair in the dual-theme shape.
+  // Affirmation overlays don't change with theme, so light and dark
+  // share the same values — the wrap exists for API parity with
+  // `composeArticleTheme`.
+  const wrap = (labelColor: string, accentColor: string): AffirmationTheme => {
+    const colors: AffirmationThemeColors = {
+      content: { labelColor, accentColor },
+    };
+    return { themes: { light: colors, dark: colors } };
+  };
+
+  // Pathological-input guard: if either region is too small to
+  // summarize reliably, fall back to a single combined-summary color
+  // for both overlays. The validation cards (150×150 → 5625 pixels per
+  // default 25% region) never trip this branch.
   if (
     topPixels.length < MIN_REGION_PIXELS ||
     botPixels.length < MIN_REGION_PIXELS
@@ -592,15 +625,15 @@ export async function predictForAffirmation(
     const dir: "lighter" | "darker" =
       combinedSummary.medL >= 50 ? "darker" : "lighter";
     const color = pickColor(combinedSummary, dir, "uniform", combinedSummary);
-    return { tagColor: color, iconColor: color };
+    return wrap(color, color);
   }
 
   const topSummary = summarizeRegion(topPixels);
   const botSummary = summarizeRegion(botPixels);
 
   // Thin-band summary used as a hue fallback when the top region mixes
-  // two color zones (image 13 TOP: blue sky AND orange horizon share the
-  // band; the sky is unambiguously blue at the very top).
+  // two color zones (image 13 TOP: blue sky AND orange horizon share
+  // the band; the sky is unambiguously blue at the very top).
   const topThinPixels = pixels.filter((px) => px.row < thinFraction);
   const topThinSummary = summarizeRegion(
     topThinPixels.length >= MIN_REGION_PIXELS / 2 ? topThinPixels : pixels
@@ -616,17 +649,21 @@ export async function predictForAffirmation(
       combinedSummary,
       topThinSummary
     );
-    return { tagColor: color, iconColor: color };
+    return wrap(color, color);
   }
 
-  return {
-    tagColor: pickColor(
-      topSummary,
-      directions.tag,
-      "split",
-      combinedSummary,
-      topThinSummary
-    ),
-    iconColor: pickColor(botSummary, directions.icon, "split", combinedSummary),
-  };
+  const labelColor = pickColor(
+    topSummary,
+    directions.tag,
+    "split",
+    combinedSummary,
+    topThinSummary
+  );
+  const accentColor = pickColor(
+    botSummary,
+    directions.icon,
+    "split",
+    combinedSummary
+  );
+  return wrap(labelColor, accentColor);
 }

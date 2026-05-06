@@ -1,7 +1,7 @@
 import express from "express";
 import multer from "multer";
 import path from "path";
-import { imageToColors } from "../lib";
+import { composeArticleTheme } from "../lib";
 
 const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
@@ -20,7 +20,7 @@ app.post("/api/analyze", upload.array("images", 50), async (req, res) => {
     files.map(async (file) => {
       const dataUrl = `data:${file.mimetype};base64,${file.buffer.toString("base64")}`;
       try {
-        const colors = await imageToColors(file.buffer);
+        const colors = await composeArticleTheme(file.buffer);
         return { name: file.originalname, colors, dataUrl };
       } catch (err: any) {
         return { name: file.originalname, error: err.message, colors: null, dataUrl: null };

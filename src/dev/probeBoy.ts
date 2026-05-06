@@ -1,6 +1,6 @@
 import path from "path";
 import sharp from "sharp";
-import { imageToColors } from "../lib";
+import { composeArticleTheme } from "../lib";
 import { hexToRgb, rgbToHex } from "../lib/color/conversion";
 import { contrastRatio } from "../lib/color/contrast";
 import { RGB } from "../lib/color/types";
@@ -42,7 +42,7 @@ async function sampleRegions(input: string): Promise<RegionAvg> {
 
 (async () => {
   const file = path.resolve(__dirname, "../../boy-dark.png");
-  const result = await imageToColors(file);
+  const result = await composeArticleTheme(file);
   const { control, lower } = await sampleRegions(file);
 
   const lb = result.themes.light.body.background.baseColor;

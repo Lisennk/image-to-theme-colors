@@ -1,6 +1,6 @@
 import express from "express";
 import path from "path";
-import { imageToColors } from "../lib";
+import { composeArticleTheme } from "../lib";
 
 const app = express();
 app.use(express.json({ limit: "30mb" }));
@@ -22,7 +22,7 @@ app.post("/colors", async (req, res) => {
   }
   try {
     const buf = Buffer.from(m[1], "base64");
-    const colors = await imageToColors(buf);
+    const colors = await composeArticleTheme(buf);
     res.json({ ...colors, imageDataUrl });
   } catch (err: any) {
     res.status(500).json({ error: String(err && err.message ? err.message : err) });

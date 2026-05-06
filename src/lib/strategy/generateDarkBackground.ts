@@ -3,7 +3,7 @@ import { hslToRgb, rgbToHex } from "../color/conversion";
 import { contrastRatio } from "../color/contrast";
 import { findMinimumLightness, ensureDarkContrast } from "../color/chromaSolvers";
 import { clamp } from "../util/math";
-import { BaseColors } from "../imageToColors";
+import { BaseColors } from "../composeArticleTheme";
 import { GenerationContext } from "./context";
 
 /**

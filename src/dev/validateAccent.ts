@@ -1,6 +1,6 @@
 import path from "path";
 import sharp from "sharp";
-import { imageToColors } from "../lib";
+import { composeArticleTheme } from "../lib";
 import { hexToRgb, rgbToHex } from "../lib/color/conversion";
 import { contrastRatio } from "../lib/color/contrast";
 import { RGB } from "../lib/color/types";
@@ -98,7 +98,7 @@ async function validate() {
 
   for (const ex of examples) {
     const input = await loadInput(ex);
-    const result = await imageToColors(input);
+    const result = await composeArticleTheme(input);
     const imgRef = await controlAreaColor(input);
 
     const lBody = result.themes.light.body.background.baseColor;

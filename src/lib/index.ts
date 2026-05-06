@@ -1,18 +1,17 @@
-export { imageToColors, imageToColors as predictForArticle } from "./imageToColors";
+export { composeArticleTheme } from "./composeArticleTheme";
 export type {
-  ImageToColorsResult,
-  ImageToColorsResult as PredictForArticleResult,
-  ImageToColorsOptions,
-  ImageToColorsOptions as PredictForArticleOptions,
-  ThemeColors,
+  ArticleTheme,
+  ArticleThemeColors,
+  ArticleThemeOptions,
   BodyTheme,
   BodyContent,
   BackgroundColors,
-} from "./imageToColors";
-export { predictForAffirmation } from "./predictForAffirmation";
+} from "./composeArticleTheme";
+export { composeAffirmationTheme } from "./composeAffirmationTheme";
 export type {
-  PredictForAffirmationResult,
-  PredictForAffirmationOptions,
-} from "./predictForAffirmation";
+  AffirmationTheme,
+  AffirmationThemeColors,
+  AffirmationThemeOptions,
+} from "./composeAffirmationTheme";
 export type { CardTheme } from "./strategy/generateCard";
 export type { RGB, HSL } from "./color/types";

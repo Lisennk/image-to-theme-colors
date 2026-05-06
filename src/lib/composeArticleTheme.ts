@@ -83,21 +83,21 @@ export interface BodyTheme {
 }
 
 /** Both surfaces (article body + feed card) for one theme. */
-export interface ThemeColors {
+export interface ArticleThemeColors {
   body: BodyTheme;
   card: CardTheme;
 }
 
-/** The output of `imageToColors`: light and dark theme color sets. */
-export interface ImageToColorsResult {
+/** The output of `composeArticleTheme`: light and dark theme color sets. */
+export interface ArticleTheme {
   themes: {
-    light: ThemeColors;
-    dark: ThemeColors;
+    light: ArticleThemeColors;
+    dark: ArticleThemeColors;
   };
 }
 
-/** Optional configuration for `imageToColors`. */
-export interface ImageToColorsOptions {
+/** Optional configuration for `composeArticleTheme`. */
+export interface ArticleThemeOptions {
   /**
    * Text color used on the light-theme body background, as a hex string.
    * The generated body background will have at least 7:1 (AAA) contrast against this.
@@ -166,7 +166,7 @@ export interface ImageToColorsOptions {
  *
  * @example
  * ```ts
- * const result = await imageToColors("./hero.jpg");
+ * const result = await composeArticleTheme("./hero.jpg");
  * // result.themes.light.body.background.baseColor       "#C0D0FF"
  * // result.themes.light.body.content.labelColor         "#214154"
  * // result.themes.light.card.background.baseColor       "#D5E2ED"
@@ -183,10 +183,10 @@ function deriveGradient(hex: string): string {
   return rgbToHex(hslToRgb(hsl));
 }
 
-export async function imageToColors(
+export async function composeArticleTheme(
   input: string | Buffer,
-  options?: ImageToColorsOptions
-): Promise<ImageToColorsResult> {
+  options?: ArticleThemeOptions
+): Promise<ArticleTheme> {
   const ctx: GenerationContext = {
     lightText: options?.lightThemeTextColor
       ? hexToRgb(options.lightThemeTextColor)

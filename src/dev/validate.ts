@@ -1,5 +1,5 @@
 import path from "path";
-import { imageToColors } from "../lib";
+import { composeArticleTheme } from "../lib";
 import { hexToRgb, rgbToHsl } from "../lib/color/conversion";
 import { contrastRatio } from "../lib/color/contrast";
 import { LIGHT_THEME_TEXT as LIGHT_TEXT, DARK_THEME_TEXT as DARK_TEXT } from "../lib/color/contrast";
@@ -42,7 +42,7 @@ async function validate() {
   for (const ex of examples) {
     const imgPath = path.resolve(__dirname, "../../examples/hero-images", ex.image);
     try {
-      const result = await imageToColors(imgPath);
+      const result = await composeArticleTheme(imgPath);
       const lightHex = result.themes.light.body.background.baseColor;
       const darkHex = result.themes.dark.body.background.baseColor;
 

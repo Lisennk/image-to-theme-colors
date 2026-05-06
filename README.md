@@ -1,14 +1,14 @@
 # image-to-theme-colors
 
-Extract accessible UI colors from any image. The library exposes two
-predictions tuned to two product surfaces:
+Compose accessible UI themes from any image. The library exposes two
+functions tuned to two product surfaces:
 
-- **`predictForArticle`** (alias `imageToColors`) — for an article system
-  whose open-state body uses the image as a hero transitioning into a
-  colored background, plus a closed-state feed card and a circular
-  control (e.g. a like button) drawn on top.
-- **`predictForAffirmation`** — for an affirmation card whose entire
-  backdrop is the image, with a category tag pinned to the top and three
+- **`composeArticleTheme`** — for an article system whose open-state
+  body uses the image as a hero transitioning into a colored background,
+  plus a closed-state feed card and a circular control (e.g. a like
+  button) drawn on top.
+- **`composeAffirmationTheme`** — for an affirmation card whose entire
+  backdrop is the image, with a category label pinned to the top and
   circular controls (Share, Bookmark, More) at the bottom.
 
 For articles, the algorithm analyzes the image's color composition and outputs:
@@ -20,10 +20,15 @@ For articles, the algorithm analyzes the image's color composition and outputs:
 …all on a shared hue per theme so the body, card, icon, and text read as one color family.
 
 For affirmations, the algorithm samples the image's top and bottom regions
-separately (the controls' underlying surfaces) and returns:
+(the overlays' underlying surfaces) and returns the same `themes.{light,dark}`
+shape:
 
-- `tagColor` — fill for the category tag at the top of the card.
-- `iconColor` — fill for the circular controls at the bottom.
+- `content.labelColor` — fill for the category label at the top of the card.
+- `content.accentColor` — fill for the circular controls at the bottom.
+
+Affirmation overlays don't change with theme, so the `light` and `dark`
+values are identical — the wrap is preserved for API parity with
+`composeArticleTheme`.
 
 ![Examples showing light and dark theme colors extracted from four different images](https://raw.githubusercontent.com/Lisennk/image-to-theme-colors/master/assets/examples.png)
 
@@ -40,9 +45,9 @@ Requires Node.js 18+ and [sharp](https://sharp.pixelplumbing.com/) (installed au
 Article (open-state body + closed-state card):
 
 ```ts
-import { predictForArticle } from "image-to-theme-colors";
+import { composeArticleTheme } from "image-to-theme-colors";
 
-const result = await predictForArticle("./hero.jpg");
+const result = await composeArticleTheme("./hero.jpg");
 // result.themes.light.body.background.baseColor       "#C0D0FF"
 // result.themes.light.body.background.linearGradient  ["#C0D0FF", "#BAC9F9"]
 // result.themes.light.card.background.baseColor       "#D5E2ED"
@@ -52,31 +57,29 @@ const result = await predictForArticle("./hero.jpg");
 // …
 ```
 
-Affirmation card (image backdrop + tag + circular icons):
+Affirmation card (image backdrop + label + circular icons):
 
 ```ts
-import { predictForAffirmation } from "image-to-theme-colors";
+import { composeAffirmationTheme } from "image-to-theme-colors";
 
-const { tagColor, iconColor } = await predictForAffirmation("./affirmation.jpg");
-// tagColor   "#B0C1E8"
-// iconColor  "#B0C1E8"
+const result = await composeAffirmationTheme("./affirmation.jpg");
+// result.themes.light.content.labelColor   "#B0C1E8"
+// result.themes.light.content.accentColor  "#B0C1E8"
+// result.themes.dark.content.labelColor    "#B0C1E8"  (same as light)
 ```
 
 ## API
 
-### `predictForArticle(input, options?)`
+### `composeArticleTheme(input, options?)`
 
 Analyzes an image and returns body and card colors for light and dark themes.
-
-> Also exported as `imageToColors` (the original v1–v3 name). The two
-> identifiers are the same function — use whichever you prefer.
 
 **Parameters:**
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `input` | `string \| Buffer` | File path or image buffer |
-| `options` | `PredictForArticleOptions` | Optional configuration |
+| `options` | `ArticleThemeOptions` | Optional configuration |
 
 **Options:**
 
@@ -91,17 +94,17 @@ Analyzes an image and returns body and card colors for light and dark themes.
 | `darkThemeCardTitleColor` | `string` | `"#FCFCFC"` | Title text color on dark-theme cards. The card guarantees 7:1 (AAA) contrast against this. |
 | `darkThemeCardSubtitleColor` | `string` | `"#A09F9E"` | Subtitle text color on dark-theme cards. The card guarantees 6:1 contrast against this. |
 
-**Returns:** `Promise<PredictForArticleResult>`
+**Returns:** `Promise<ArticleTheme>`
 
 ```ts
-interface PredictForArticleResult {
+interface ArticleTheme {
   themes: {
-    light: ThemeColors;
-    dark: ThemeColors;
+    light: ArticleThemeColors;
+    dark: ArticleThemeColors;
   };
 }
 
-interface ThemeColors {
+interface ArticleThemeColors {
   body: { background: BackgroundColors };
   card: {
     background: BackgroundColors;
@@ -115,11 +118,11 @@ interface BackgroundColors {
 }
 ```
 
-### `predictForAffirmation(input, options?)`
+### `composeAffirmationTheme(input, options?)`
 
-Analyzes an image and returns colors for the tag (top) and circular
+Analyzes an image and returns colors for the label (top) and circular
 icons (bottom) of an affirmation card. The image itself is the card's
-backdrop, so each control's color is solved against the slice of the
+backdrop, so each overlay's color is solved against the slice of the
 image it sits on.
 
 **Parameters:**
@@ -127,23 +130,32 @@ image it sits on.
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `input` | `string \| Buffer` | File path or image buffer |
-| `options` | `PredictForAffirmationOptions` | Optional configuration |
+| `options` | `AffirmationThemeOptions` | Optional configuration |
 
 **Options:**
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `topRegionFraction` | `number` | `0.25` | Fraction of image height (0.05–0.5) treated as the top region (under the tag). Lower for thinner top bands when the tag covers a smaller share of the image. |
+| `topRegionFraction` | `number` | `0.25` | Fraction of image height (0.05–0.5) treated as the top region (under the label). Lower for thinner top bands when the label covers a smaller share of the image. |
 | `bottomRegionFraction` | `number` | `0.25` | Fraction of image height (0.05–0.5) treated as the bottom region (under the icons). |
 
-**Returns:** `Promise<PredictForAffirmationResult>`
+**Returns:** `Promise<AffirmationTheme>`
 
 ```ts
-interface PredictForAffirmationResult {
-  /** Hex color for the category tag at the top of the card. */
-  tagColor: string;
-  /** Hex color for the circular icons at the bottom of the card. */
-  iconColor: string;
+interface AffirmationTheme {
+  themes: {
+    light: AffirmationThemeColors;
+    dark: AffirmationThemeColors;  // identical to light
+  };
+}
+
+interface AffirmationThemeColors {
+  content: {
+    /** Color for the category label at the top (≈ article body.content.labelColor). */
+    labelColor: string;
+    /** Color for the circular icons at the bottom (≈ article card.content.accentColor). */
+    accentColor: string;
+  };
 }
 ```
 
@@ -156,14 +168,15 @@ lightness and saturation are tuned so the control reads cleanly against
 the underlying image — a dark image yields a light pastel control, a
 bright vivid image yields a dark or desaturated control.
 
-Example with a smaller top band (e.g. a tag that overlaps only the top
-12% of a thumbnail):
+Example with a smaller top band (e.g. a label that overlaps only the
+top 12% of a thumbnail):
 
 ```ts
-const { tagColor, iconColor } = await predictForAffirmation("./affirmation.jpg", {
+const result = await composeAffirmationTheme("./affirmation.jpg", {
   topRegionFraction: 0.12,
   bottomRegionFraction: 0.20,
 });
+const { labelColor, accentColor } = result.themes.light.content;
 ```
 
 EXIF orientation is honored: if the image file has a rotation tag (as
@@ -175,7 +188,7 @@ the *visual* image is what gets analyzed.
 With custom text and feed colors:
 
 ```ts
-const result = await predictForArticle(buffer, {
+const result = await composeArticleTheme(buffer, {
   lightThemeTextColor: "#1A1A1A",
   darkThemeTextColor: "#F0F0F0",
   lightThemeFeedBackgroundColor: "#F5F5F5",
@@ -186,7 +199,7 @@ const result = await predictForArticle(buffer, {
 Using the gradient in CSS:
 
 ```ts
-const { light } = (await predictForArticle("./hero.jpg")).themes;
+const { light } = (await composeArticleTheme("./hero.jpg")).themes;
 
 // open-state body
 articleEl.style.backgroundColor = light.body.background.baseColor;
@@ -206,17 +219,17 @@ From an HTTP upload (Express + multer):
 
 ```ts
 app.post("/upload", upload.single("image"), async (req, res) => {
-  const colors = await predictForArticle(req.file.buffer);
+  const colors = await composeArticleTheme(req.file.buffer);
   res.json(colors);
 });
 ```
 
 ## How it works
 
-This section describes the **article** algorithm (`predictForArticle`).
-The affirmation algorithm (`predictForAffirmation`) follows a different
+This section describes the **article** algorithm (`composeArticleTheme`).
+The affirmation algorithm (`composeAffirmationTheme`) follows a different
 flow — see the per-region split/uniform discussion in the
-`predictForAffirmation` section above.
+`composeAffirmationTheme` section above.
 
 The article algorithm runs in four phases:
 

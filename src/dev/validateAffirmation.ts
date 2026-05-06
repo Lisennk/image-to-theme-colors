@@ -1,13 +1,13 @@
 /**
- * Validate `predictForAffirmation` against the 13 reference affirmation
+ * Validate `composeAffirmationTheme` against the 13 reference affirmation
  * images in examples/affirmations/source. Reports per-example deltas for
- * the tag and icon colors, plus an overall pass rate at the 5% tolerance.
+ * the label and accent colors, plus an overall pass rate at the 5% tolerance.
  *
  * Run with: npm run dev:validate-affirmation
  */
 import path from "path";
 import fs from "fs";
-import { predictForAffirmation } from "../lib";
+import { composeAffirmationTheme } from "../lib";
 import { hexToRgb, rgbToHsl } from "../lib/color/conversion";
 import { colorDiffPercent } from "./colorUtils";
 
@@ -64,13 +64,15 @@ async function validate(): Promise<void> {
       continue;
     }
     try {
-      const result = await predictForAffirmation(imgPath);
+      const result = await composeAffirmationTheme(imgPath);
+      const labelHex = result.themes.light.content.labelColor;
+      const accentHex = result.themes.light.content.accentColor;
       const tagDiff = colorDiffPercent(
-        hexToRgb(result.tagColor),
+        hexToRgb(labelHex),
         hexToRgb(ex.expectedTag)
       );
       const iconDiff = colorDiffPercent(
-        hexToRgb(result.iconColor),
+        hexToRgb(accentHex),
         hexToRgb(ex.expectedIcons)
       );
       allDiffs.push(tagDiff, iconDiff);
@@ -82,8 +84,8 @@ async function validate(): Promise<void> {
 
       rows.push(
         `${ok ? "✓" : "✗"} Ex ${ex.id.padStart(2)}  ` +
-          `TAG ${result.tagColor} ${fmtHsl(result.tagColor)} vs ${ex.expectedTag} ${fmtHsl(ex.expectedTag)} ${tagDiff.toFixed(1).padStart(5)}% |${bar(tagDiff)}| ${tagOk ? "✓" : "✗"}  ` +
-          `ICN ${result.iconColor} ${fmtHsl(result.iconColor)} vs ${ex.expectedIcons} ${fmtHsl(ex.expectedIcons)} ${iconDiff.toFixed(1).padStart(5)}% |${bar(iconDiff)}| ${iconOk ? "✓" : "✗"}`
+          `TAG ${labelHex} ${fmtHsl(labelHex)} vs ${ex.expectedTag} ${fmtHsl(ex.expectedTag)} ${tagDiff.toFixed(1).padStart(5)}% |${bar(tagDiff)}| ${tagOk ? "✓" : "✗"}  ` +
+          `ICN ${accentHex} ${fmtHsl(accentHex)} vs ${ex.expectedIcons} ${fmtHsl(ex.expectedIcons)} ${iconDiff.toFixed(1).padStart(5)}% |${bar(iconDiff)}| ${iconOk ? "✓" : "✗"}`
       );
     } catch (err) {
       rows.push(`✗ Ex ${ex.id.padStart(2)}  ERROR: ${(err as Error).message}`);
