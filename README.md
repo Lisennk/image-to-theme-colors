@@ -64,16 +64,19 @@ const { tagColor, iconColor } = await predictForAffirmation("./affirmation.jpg")
 
 ## API
 
-### `imageToColors(input, options?)`
+### `predictForArticle(input, options?)`
 
 Analyzes an image and returns body and card colors for light and dark themes.
+
+> Also exported as `imageToColors` (the original v1–v3 name). The two
+> identifiers are the same function — use whichever you prefer.
 
 **Parameters:**
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `input` | `string \| Buffer` | File path or image buffer |
-| `options` | `ImageToColorsOptions` | Optional configuration |
+| `options` | `PredictForArticleOptions` | Optional configuration |
 
 **Options:**
 
@@ -88,10 +91,10 @@ Analyzes an image and returns body and card colors for light and dark themes.
 | `darkThemeCardTitleColor` | `string` | `"#FCFCFC"` | Title text color on dark-theme cards. The card guarantees 7:1 (AAA) contrast against this. |
 | `darkThemeCardSubtitleColor` | `string` | `"#A09F9E"` | Subtitle text color on dark-theme cards. The card guarantees 6:1 contrast against this. |
 
-**Returns:** `Promise<ImageToColorsResult>`
+**Returns:** `Promise<PredictForArticleResult>`
 
 ```ts
-interface ImageToColorsResult {
+interface PredictForArticleResult {
   themes: {
     light: ThemeColors;
     dark: ThemeColors;
@@ -172,7 +175,7 @@ the *visual* image is what gets analyzed.
 With custom text and feed colors:
 
 ```ts
-const result = await imageToColors(buffer, {
+const result = await predictForArticle(buffer, {
   lightThemeTextColor: "#1A1A1A",
   darkThemeTextColor: "#F0F0F0",
   lightThemeFeedBackgroundColor: "#F5F5F5",
@@ -183,7 +186,7 @@ const result = await imageToColors(buffer, {
 Using the gradient in CSS:
 
 ```ts
-const { light } = (await imageToColors("./hero.jpg")).themes;
+const { light } = (await predictForArticle("./hero.jpg")).themes;
 
 // open-state body
 articleEl.style.backgroundColor = light.body.background.baseColor;
@@ -203,14 +206,19 @@ From an HTTP upload (Express + multer):
 
 ```ts
 app.post("/upload", upload.single("image"), async (req, res) => {
-  const colors = await imageToColors(req.file.buffer);
+  const colors = await predictForArticle(req.file.buffer);
   res.json(colors);
 });
 ```
 
 ## How it works
 
-The algorithm runs in four phases:
+This section describes the **article** algorithm (`predictForArticle`).
+The affirmation algorithm (`predictForAffirmation`) follows a different
+flow — see the per-region split/uniform discussion in the
+`predictForAffirmation` section above.
+
+The article algorithm runs in four phases:
 
 **1. Pixel extraction** — Resizes the image to 150px (preserving aspect ratio) and converts to HSL pixel data.
 
