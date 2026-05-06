@@ -159,12 +159,76 @@ export interface PickColorContext {
 }
 
 /**
+ * Decide the output hue.
+ *
+ * The default is the S-weighted dominant cluster of the per-region
+ * summary. Three overrides apply on top, in order — each replaces the
+ * previous if it fires:
+ *
+ *  1. **Dark-cluster hue (per-region)** for high-purity darker
+ *     outputs — sunset clouds skew red in shadow (image 3).
+ *  2. **Dark-cluster hue (combined)** when the per-region cluster's
+ *     dim slice is still bright (image 3 TOP has no real shadow).
+ *  3. **Area-dominant hue** for low-purity lighter outputs whose
+ *     S-weighted dominant disagrees with the area majority — small
+ *     saturated accents losing to a wider, less-saturated zone.
+ *  4. **Thin-band dominant** for low-purity lighter outputs where
+ *     the very-top sliver carries a cleaner color than the full top
+ *     region (image 13 TAG).
+ *
+ * The order is deliberate: the darker overrides only inspect the
+ * "darker" path, the lighter overrides only inspect the "lighter"
+ * path, so they never conflict for a given direction.
+ */
+function pickOutputHue(
+  summary: RegionSummary,
+  direction: AffirmationDirection,
+  ctx: PickColorContext
+): number {
+  let h = summary.dominantHue;
+
+  if (direction === "darker" && summary.huePurity > 0.8) {
+    if (hueDistance(summary.dominantHue, summary.darkClusterHue) > 8) {
+      h = summary.darkClusterHue;
+    }
+    if (
+      ctx.combined &&
+      summary.clusterDarkL > 60 &&
+      hueDistance(summary.dominantHue, ctx.combined.darkClusterHue) > 8 &&
+      ctx.combined.darkClusterS > 20
+    ) {
+      h = ctx.combined.darkClusterHue;
+    }
+    return h;
+  }
+
+  if (direction === "lighter" && summary.huePurity < 0.7) {
+    if (
+      summary.areaPurity > 0.3 &&
+      hueDistance(summary.dominantHue, summary.areaDominantHue) > 60
+    ) {
+      h = summary.areaDominantHue;
+    }
+    if (
+      ctx.topThin &&
+      ctx.topThin.huePurity > 0.5 &&
+      hueDistance(summary.dominantHue, ctx.topThin.dominantHue) > 60
+    ) {
+      h = ctx.topThin.dominantHue;
+    }
+  }
+
+  return h;
+}
+
+/**
  * Pick a color for a region, given a direction and mode.
  *
- * Composes the saturation, lightness, and hue selectors. The achromatic
- * special case (vivid bright field with white speckles — image 9)
- * short-circuits to a desaturated dark grey before the per-component
- * solvers run, since the rest of the pipeline assumes hue continuity.
+ * Composes the saturation, lightness, and hue selectors. The
+ * achromatic special case (vivid bright field with white speckles —
+ * image 9) short-circuits to a desaturated dark grey before the
+ * per-component solvers run, since the rest of the pipeline assumes
+ * hue continuity.
  */
 export function pickColor(
   summary: RegionSummary,
@@ -181,52 +245,8 @@ export function pickColor(
     return rgbToHex(hslToRgb({ h: summary.dominantHue, s: 0, l: 20 }));
   }
 
-  const outS = pickOutputSaturation(summary, direction, mode);
-  const outL = pickOutputLightness(summary, direction, mode, outS);
-  // Hue selection. Default is the S-weighted dominant cluster.
-  let outH = summary.dominantHue;
-  // For darker outputs the cluster's *dark* hue is more representative
-  // than the broad cluster mean (image 3: sunset clouds skew red in
-  // shadow). When the per-region cluster's "dark side" is itself still
-  // bright (image 3 TOP cluster's dimmest pixels are still L > 70),
-  // fall back to the combined summary's dark hue, which has access to
-  // the image's actually-dark pixels.
-  if (direction === "darker" && summary.huePurity > 0.8) {
-    if (hueDistance(summary.dominantHue, summary.darkClusterHue) > 8) {
-      outH = summary.darkClusterHue;
-    }
-    if (
-      ctx.combined &&
-      summary.clusterDarkL > 60 &&
-      hueDistance(summary.dominantHue, ctx.combined.darkClusterHue) > 8 &&
-      ctx.combined.darkClusterS > 20
-    ) {
-      outH = ctx.combined.darkClusterHue;
-    }
-  }
-  // Multi-color image (low huePurity) with a clear area-dominant peak
-  // — the viewer reads the area-dominant hue as the image's color even
-  // when small saturated accents win the S-weighted histogram.
-  if (
-    direction === "lighter" &&
-    summary.huePurity < 0.7 &&
-    summary.areaPurity > 0.3 &&
-    hueDistance(summary.dominantHue, summary.areaDominantHue) > 60
-  ) {
-    outH = summary.areaDominantHue;
-  }
-  // Thin-band fallback (image 13 TAG): when the broad top region mixes
-  // two distinct colors (low huePurity), the topmost slice often
-  // contains the cleaner dominant — sky stays blue at the very top
-  // even when the lower band is washed in horizon glow.
-  if (
-    direction === "lighter" &&
-    summary.huePurity < 0.7 &&
-    ctx.topThin &&
-    ctx.topThin.huePurity > 0.5 &&
-    hueDistance(summary.dominantHue, ctx.topThin.dominantHue) > 60
-  ) {
-    outH = ctx.topThin.dominantHue;
-  }
-  return rgbToHex(hslToRgb({ h: outH, s: outS, l: outL }));
+  const s = pickOutputSaturation(summary, direction, mode);
+  const l = pickOutputLightness(summary, direction, mode, s);
+  const h = pickOutputHue(summary, direction, ctx);
+  return rgbToHex(hslToRgb({ h, s, l }));
 }
