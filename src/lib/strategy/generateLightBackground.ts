@@ -2,7 +2,7 @@ import { ImageAnalysis } from "../analysis/types";
 import { hslToRgb, rgbToHex } from "../color/conversion";
 import { findMinimumLightness, ensureDarkContrast } from "../color/chromaSolvers";
 import { clamp } from "../util/math";
-import { BaseColors } from "../composeArticleTheme";
+import { BaseColors } from "./types";
 import { GenerationContext } from "./context";
 
 /**

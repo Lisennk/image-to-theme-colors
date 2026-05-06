@@ -5,6 +5,7 @@ export type {
   ArticleThemeOptions,
   BodyTheme,
   BodyContent,
+  CardTheme,
   BackgroundColors,
 } from "./composeArticleTheme";
 export { composeAffirmationTheme } from "./composeAffirmationTheme";
@@ -13,5 +14,4 @@ export type {
   AffirmationThemeColors,
   AffirmationThemeOptions,
 } from "./composeAffirmationTheme";
-export type { CardTheme } from "./strategy/generateCard";
 export type { RGB, HSL } from "./color/types";

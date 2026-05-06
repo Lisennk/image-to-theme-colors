@@ -11,3 +11,14 @@ export type ThemeStrategy =
   | "dominant_mid"
   | "light_bg"
   | "dark_bg";
+
+/**
+ * Body base colors returned by strategy generators. The light/dark hex
+ * pair becomes `body.background.baseColor` for each theme; the article
+ * pipeline derives gradient stops, accents, label, and card colors
+ * from these two values.
+ */
+export interface BaseColors {
+  light: string;
+  dark: string;
+}

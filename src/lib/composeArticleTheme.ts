@@ -15,16 +15,11 @@ import { generateAchromatic } from "./strategy/generateAchromatic";
 import { generateDominantMid } from "./strategy/generateDominantMid";
 import { generateLightBackground } from "./strategy/generateLightBackground";
 import { generateDarkBackground } from "./strategy/generateDarkBackground";
-import { generateCardThemes, CardTheme } from "./strategy/generateCard";
+import { generateCardThemes } from "./strategy/generateCard";
 import { generateBodyAccent } from "./strategy/generateAccent";
 import { generateBodyLabel } from "./strategy/generateLabel";
+import type { BaseColors } from "./strategy/types";
 import { RGB } from "./color/types";
-
-/** Base colors returned by strategy generators (internal). */
-export interface BaseColors {
-  light: string;
-  dark: string;
-}
 
 /** A solid color plus a two-stop linear gradient on the same hue. */
 export interface BackgroundColors {
@@ -79,6 +74,20 @@ export interface BodyContent {
 export interface BodyTheme {
   background: BackgroundColors;
   content: BodyContent;
+}
+
+/** Feed card (closed-state) colors for one theme. */
+export interface CardTheme {
+  background: BackgroundColors;
+  content: {
+    /**
+     * Color of the circular control on the feed card (e.g. like
+     * button). Reuses `body.content.labelColor` so the open-state and
+     * feed-state palettes stay coherent; AA (4.5:1) against the card
+     * surface.
+     */
+    accentColor: string;
+  };
 }
 
 /** Both surfaces (article body + feed card) for one theme. */

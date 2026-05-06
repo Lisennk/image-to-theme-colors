@@ -7,17 +7,7 @@ import {
   findMinLightnessAgainstDarker,
 } from "../color/chromaSolvers";
 import { clamp } from "../util/math";
-
-/** Card colors for one theme: surface gradient and content/icon color. */
-export interface CardTheme {
-  background: {
-    baseColor: string;
-    linearGradient: [string, string];
-  };
-  content: {
-    accentColor: string;
-  };
-}
+import type { CardTheme } from "../composeArticleTheme";
 
 /**
  * Card colors share their hue with the body output (so the card hints at the

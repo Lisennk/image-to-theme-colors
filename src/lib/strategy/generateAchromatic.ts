@@ -1,4 +1,4 @@
-import { BaseColors } from "../composeArticleTheme";
+import { BaseColors } from "./types";
 
 /** Achromatic images (B&W, grayscale) → pure white and warm near-black. */
 export function generateAchromatic(): BaseColors {
