@@ -139,12 +139,13 @@
             mask-image: linear-gradient(to bottom, #000 70%, transparent);
     position: relative;
   }
-  /* Liquid-Glass control container at the top-right of the image */
+  /* Liquid-Glass control container at the top-right of the image —
+     fill is accent color at 15% over a backdrop blur. */
   .article-glass {
     position: absolute; top: 14px; right: 14px;
     display: inline-flex; align-items: center; justify-content: center;
     width: 38px; height: 38px; border-radius: 999px;
-    background: rgba(255,255,255,.18);
+    background: var(--bodyGlassBg);
     backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
     color: var(--bodyAccentOverImage);
   }
@@ -171,12 +172,13 @@
     box-shadow: 0 6px 22px rgba(0,0,0,.08);
     background: #DDD center/cover;
   }
+  /* Affirmation tag pill — fill is labelColor at 15% over a backdrop blur. */
   .aff-tag {
     position: absolute; top: 16px; left: 16px;
     display: inline-flex; align-items: center; gap: 6px;
     padding: 6px 12px; border-radius: 999px;
     font-size: 13px; font-weight: 500;
-    background: rgba(255,255,255,.16);
+    background: var(--affLabelBg);
     backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
     color: var(--affLabel);
   }
@@ -186,10 +188,11 @@
     display: flex; justify-content: space-between; align-items: center;
   }
   .aff-actions .right { display: flex; gap: 10px; }
+  /* Affirmation circular icons — fill is accentColor at 15% over a backdrop blur. */
   .aff-iconbtn {
     width: 38px; height: 38px; border-radius: 999px;
     display: inline-flex; align-items: center; justify-content: center;
-    background: rgba(255,255,255,.16);
+    background: var(--affAccentBg);
     backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
     color: var(--affAccent);
     border: none;
@@ -287,7 +290,10 @@ const CARD_TEXT = {
 };
 
 // 15% opacity hex suffix for icon-button backgrounds
+// (8-digit hex: #RRGGBB + AA, where AA=26 is 38/255 ≈ 15%, same as
+// rgba(…, 0.15)).
 const ALPHA_15 = '26';
+const at15 = (hex) => `${hex}${ALPHA_15}`;
 
 const sym = (name) => `<span class="material-symbols-outlined">${name}</span>`;
 const ICON = {
@@ -315,7 +321,7 @@ function buildCard(theme, imageDataUrl, themeName) {
       --cardAccent: ${accent};
       --cardTitle: ${txt.title};
       --cardSubtitle: ${txt.subtitle};
-      --btnBg: ${accent}${ALPHA_15};
+      --btnBg: ${at15(accent)};
     ">
       <div class="card-image" style="background-image: url('${imageDataUrl}')"></div>
       <div class="card-body">
@@ -345,6 +351,7 @@ function buildArticle(theme, imageDataUrl, themeName) {
       --bodyBgStart: ${bgStart};
       --bodyBgEnd: ${bgEnd};
       --bodyAccentOverImage: ${accentImage};
+      --bodyGlassBg: ${at15(accentImage)};
       --bodyLabel: ${label};
       --articleText: ${txt.title};
     ">
@@ -367,7 +374,9 @@ function buildAffirmation(theme, imageDataUrl) {
   return `
     <div class="affirmation" style="
       --affLabel: ${label};
+      --affLabelBg: ${at15(label)};
       --affAccent: ${accent};
+      --affAccentBg: ${at15(accent)};
       background-image: url('${imageDataUrl}');
     ">
       <span class="aff-tag">${ICON.bolt} Motivation phrase</span>
