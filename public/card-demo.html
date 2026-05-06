@@ -25,6 +25,7 @@
   }
   .wrap { max-width: 1320px; margin: 0 auto; }
   h1 { font: 600 22px/1.2 inherit; margin: 0 0 4px; }
+  h2 { font: 600 16px/1.2 inherit; margin: 0; }
   .lede { color: var(--ui-fg-dim); margin: 0 0 32px; }
   .panel {
     border: 1px solid var(--ui-border);
@@ -44,11 +45,26 @@
   .uploader .filename { color: var(--ui-fg-dim); font-size: 14px; }
   .err { color: #B91C1C; margin-top: 12px; font-size: 14px; }
 
+  .section {
+    margin-top: 40px;
+    padding-top: 8px;
+  }
+  .section-head {
+    display: flex; align-items: baseline; gap: 12px;
+    margin: 0 0 18px; padding: 0 4px;
+  }
+  .section-head .badge {
+    font: 500 11px/1 ui-monospace, "SF Mono", Menlo, monospace;
+    text-transform: uppercase; letter-spacing: .06em;
+    padding: 4px 8px; border-radius: 999px;
+    background: var(--ui-fg); color: #FFF;
+  }
+  .section-head .desc { color: var(--ui-fg-dim); font-size: 13px; }
+
   .results {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 24px;
-    margin-top: 32px;
   }
   @media (max-width: 880px) { .results { grid-template-columns: 1fr; } }
 
@@ -61,7 +77,7 @@
   .surface[data-theme=light] .label { color: rgba(0,0,0,.5); }
   .surface[data-theme=dark]  .label { color: rgba(255,255,255,.55); }
 
-  /* ---- Card ---- */
+  /* ---- Feed card (article, closed-state) ---- */
   .card {
     width: 100%; max-width: 360px; margin: 0 auto;
     border-radius: 24px;
@@ -80,14 +96,12 @@
   }
   .card-body {
     flex: 1;
-    /* % margin/padding are relative to card width — equal to image height
-       since the image is square, so the numbers are also % of image height. */
     margin-top: -30%;            /* overlap the image's bottom 30% (the fade zone) */
-    padding: 20% 22px 22px;      /* push title past the fade so the image ends before it */
+    padding: 20% 22px 22px;
     display: flex; flex-direction: column;
-    position: relative;          /* paint above the image */
+    position: relative;
   }
-  .card-tag { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500; margin-bottom: 14px; color: var(--cardContent); }
+  .card-tag { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500; margin-bottom: 14px; color: var(--cardLabel); }
   .card-tag .material-symbols-outlined { font-size: 18px; }
   .card-title { font: 600 21px/1.22 "Lora", "Iowan Old Style", "Charter", "Georgia", serif; margin: 0 0 10px; color: var(--cardTitle); }
   .card-desc { font-size: 14px; line-height: 1.42; margin: 0 0 auto; color: var(--cardSubtitle); }
@@ -101,20 +115,21 @@
     display: inline-flex; align-items: center; justify-content: center;
     background: var(--btnBg);
     backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-    color: var(--cardContent);
+    color: var(--cardAccent);
     border: none;
     cursor: pointer;
     padding: 0;
   }
   .iconbtn .material-symbols-outlined { font-size: 22px; }
 
-  /* ---- Open-state body preview ---- */
+  /* ---- Open-state article ---- */
   .article {
     width: 100%; max-width: 480px; margin: 0 auto;
     border-radius: 20px; overflow: hidden;
     display: flex; flex-direction: column;
     box-shadow: 0 6px 22px rgba(0,0,0,.08);
     background: linear-gradient(to bottom, var(--bodyBgStart), var(--bodyBgEnd));
+    position: relative;
   }
   .article-image {
     aspect-ratio: 1;
@@ -122,7 +137,18 @@
     flex: none;
     -webkit-mask-image: linear-gradient(to bottom, #000 70%, transparent);
             mask-image: linear-gradient(to bottom, #000 70%, transparent);
+    position: relative;
   }
+  /* Liquid-Glass control container at the top-right of the image */
+  .article-glass {
+    position: absolute; top: 14px; right: 14px;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 38px; height: 38px; border-radius: 999px;
+    background: rgba(255,255,255,.18);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    color: var(--bodyAccentOverImage);
+  }
+  .article-glass .material-symbols-outlined { font-size: 20px; }
   .article-body {
     flex: 1;
     margin-top: -30%;
@@ -130,17 +156,54 @@
     color: var(--articleText);
     position: relative;
   }
-  .article-tag { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500; margin-bottom: 14px; color: var(--articleTag); }
+  .article-tag { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500; margin-bottom: 14px; color: var(--bodyLabel); }
   .article-tag .material-symbols-outlined { font-size: 18px; }
   .article-title { font: 600 26px/1.18 "Lora", "Iowan Old Style", "Charter", "Georgia", serif; margin: 0 0 12px; }
   .article-text { font-size: 15px; line-height: 1.55; opacity: .92; margin: 0 0 12px; }
 
+  /* ---- Affirmation card (full-bleed image, tag at top, icons at bottom) ---- */
+  .affirmation {
+    width: 100%; max-width: 320px; margin: 0 auto;
+    aspect-ratio: 9 / 16;
+    border-radius: 24px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 6px 22px rgba(0,0,0,.08);
+    background: #DDD center/cover;
+  }
+  .aff-tag {
+    position: absolute; top: 16px; left: 16px;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px; border-radius: 999px;
+    font-size: 13px; font-weight: 500;
+    background: rgba(255,255,255,.16);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    color: var(--affLabel);
+  }
+  .aff-tag .material-symbols-outlined { font-size: 16px; }
+  .aff-actions {
+    position: absolute; left: 16px; right: 16px; bottom: 16px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .aff-actions .right { display: flex; gap: 10px; }
+  .aff-iconbtn {
+    width: 38px; height: 38px; border-radius: 999px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,.16);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    color: var(--affAccent);
+    border: none;
+    cursor: pointer;
+    padding: 0;
+  }
+  .aff-iconbtn .material-symbols-outlined { font-size: 20px; }
+
   /* ---- Hex outputs ---- */
   .colors { margin-top: 24px; display: flex; flex-direction: column; gap: 6px; }
-  .color-row { display: grid; grid-template-columns: minmax(140px, auto) 1fr auto; align-items: center; gap: 8px; }
+  .color-row { display: grid; grid-template-columns: minmax(180px, auto) 1fr auto; align-items: center; gap: 8px; }
   .surface[data-theme=light] .color-row .lbl { color: rgba(0,0,0,.6); }
   .surface[data-theme=dark]  .color-row .lbl { color: rgba(255,255,255,.65); }
-  .color-row .lbl { font-size: 12px; font-family: ui-monospace, "SF Mono", Menlo, monospace; white-space: nowrap; }
+  .color-row .lbl { font-size: 11px; font-family: ui-monospace, "SF Mono", Menlo, monospace; white-space: nowrap; }
   .color-row .field { display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px; border-radius: 8px; min-width: 0; background: rgba(0,0,0,.04); border: 1px solid rgba(0,0,0,.08); }
   .surface[data-theme=dark] .color-row .field { background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.08); }
   .color-row .sw { width: 16px; height: 16px; border-radius: 4px; flex: none; box-shadow: inset 0 0 0 1px rgba(0,0,0,.1); }
@@ -166,7 +229,7 @@
 <body>
 <div class="wrap">
   <h1>image-to-theme-colors — demo</h1>
-  <p class="lede">Upload an image to preview the feed card and the open-state article in both themes.</p>
+  <p class="lede">Upload an image to preview both <code>composeArticleTheme</code> (feed card + open-state article, light + dark) and <code>composeAffirmationTheme</code> (single overlay theme — same in light and dark).</p>
 
   <div class="panel uploader">
     <label for="file">
@@ -178,12 +241,33 @@
   </div>
   <div class="err" id="err"></div>
 
-  <div class="results" id="results">
-    <div class="placeholder">Light card preview</div>
-    <div class="placeholder">Light article preview</div>
-    <div class="placeholder">Dark card preview</div>
-    <div class="placeholder">Dark article preview</div>
-  </div>
+  <!-- Article section -->
+  <section class="section">
+    <div class="section-head">
+      <span class="badge">composeArticleTheme</span>
+      <h2>Article</h2>
+      <span class="desc">feed card (closed state) + article body (open state), both themes</span>
+    </div>
+    <div class="results" id="article-results">
+      <div class="placeholder">Light card preview</div>
+      <div class="placeholder">Light article preview</div>
+      <div class="placeholder">Dark card preview</div>
+      <div class="placeholder">Dark article preview</div>
+    </div>
+  </section>
+
+  <!-- Affirmation section -->
+  <section class="section">
+    <div class="section-head">
+      <span class="badge">composeAffirmationTheme</span>
+      <h2>Affirmation</h2>
+      <span class="desc">image as backdrop, label at top, circular controls at bottom — same in light and dark</span>
+    </div>
+    <div class="results" id="affirmation-results">
+      <div class="placeholder">Affirmation preview</div>
+      <div class="placeholder">Color values</div>
+    </div>
+  </section>
 </div>
 
 <script>
@@ -191,34 +275,47 @@ const $ = (sel) => document.querySelector(sel);
 const fileInput = $('#file');
 const filename = $('#filename');
 const err = $('#err');
-const results = $('#results');
+const articleResults = $('#article-results');
+const affirmationResults = $('#affirmation-results');
 
-// 15% opacity hex suffix → 0.15 * 255 = 38.25 ≈ 0x26
+// Card title/subtitle text colors (library defaults — these aren't echoed
+// back in the v4 result; we hardcode them here so the rendered preview
+// uses the same values the contrast solver targeted).
+const CARD_TEXT = {
+  light: { title: '#2A2925', subtitle: '#51504D' },
+  dark:  { title: '#FCFCFC', subtitle: '#A09F9E' },
+};
+
+// 15% opacity hex suffix for icon-button backgrounds
 const ALPHA_15 = '26';
 
 const sym = (name) => `<span class="material-symbols-outlined">${name}</span>`;
 const ICON = {
-  book:  sym('menu_book'),
-  dots:  sym('more_horiz'),
-  share: sym('ios_share'),
-  heart: sym('favorite'),
-  copy:  sym('content_copy'),
-  check: sym('check'),
+  book:    sym('menu_book'),
+  dots:    sym('more_horiz'),
+  share:   sym('ios_share'),
+  heart:   sym('favorite'),
+  bookmark:sym('bookmark'),
+  bolt:    sym('bolt'),
+  copy:    sym('content_copy'),
+  check:   sym('check'),
 };
 
 function buildCard(theme, imageDataUrl, themeName) {
   const bgStart = theme.card.background.linearGradient[0];
   const bgEnd   = theme.card.background.linearGradient[1];
-  const content = theme.card.content.color;
-  const t = theme.card.text;
+  const label   = theme.card.content.labelColor;
+  const accent  = theme.card.content.accentColor;
+  const txt     = CARD_TEXT[themeName];
   return `
     <div class="card" style="
       --cardBgStart: ${bgStart};
       --cardBgEnd: ${bgEnd};
-      --cardContent: ${content};
-      --cardTitle: ${t.title};
-      --cardSubtitle: ${t.subtitle};
-      --btnBg: ${content}${ALPHA_15};
+      --cardLabel: ${label};
+      --cardAccent: ${accent};
+      --cardTitle: ${txt.title};
+      --cardSubtitle: ${txt.subtitle};
+      --btnBg: ${accent}${ALPHA_15};
     ">
       <div class="card-image" style="background-image: url('${imageDataUrl}')"></div>
       <div class="card-body">
@@ -238,24 +335,48 @@ function buildCard(theme, imageDataUrl, themeName) {
 }
 
 function buildArticle(theme, imageDataUrl, themeName) {
-  const bgStart = theme.body.background.linearGradient[0];
-  const bgEnd   = theme.body.background.linearGradient[1];
-  const t = theme.card.text;
-  const tagColor = theme.card.content.color;
+  const bgStart      = theme.body.background.linearGradient[0];
+  const bgEnd        = theme.body.background.linearGradient[1];
+  const accentImage  = theme.body.content.accentColor.overImage;
+  const label        = theme.body.content.labelColor;
+  const txt          = CARD_TEXT[themeName];
   return `
     <div class="article" style="
       --bodyBgStart: ${bgStart};
       --bodyBgEnd: ${bgEnd};
-      --articleText: ${t.title};
-      --articleSubtle: ${t.subtitle};
-      --articleTag: ${tagColor};
+      --bodyAccentOverImage: ${accentImage};
+      --bodyLabel: ${label};
+      --articleText: ${txt.title};
     ">
-      <div class="article-image" style="background-image: url('${imageDataUrl}')"></div>
+      <div class="article-image" style="background-image: url('${imageDataUrl}')">
+        <div class="article-glass" title="Liquid-Glass icon (overImage)">${ICON.bookmark}</div>
+      </div>
       <div class="article-body">
         <span class="article-tag">${ICON.book} Article</span>
         <h2 class="article-title">Becoming Whole Again: Finding Yourself After the Love Ends</h2>
         <p class="article-text">A gentle guide to healing your heart, rediscovering your identity, and rebuilding your life — one quiet, deliberate step at a time.</p>
         <p class="article-text">When something ends, it leaves behind a shape — a hollow that we instinctively try to fill. But the work of becoming whole again isn't refilling the shape; it's growing past it.</p>
+      </div>
+    </div>
+  `;
+}
+
+function buildAffirmation(theme, imageDataUrl) {
+  const label  = theme.card.content.labelColor;
+  const accent = theme.card.content.accentColor;
+  return `
+    <div class="affirmation" style="
+      --affLabel: ${label};
+      --affAccent: ${accent};
+      background-image: url('${imageDataUrl}');
+    ">
+      <span class="aff-tag">${ICON.bolt} Motivation phrase</span>
+      <div class="aff-actions">
+        <button class="aff-iconbtn" title="More">${ICON.dots}</button>
+        <div class="right">
+          <button class="aff-iconbtn" title="Share">${ICON.share}</button>
+          <button class="aff-iconbtn" title="Bookmark">${ICON.bookmark}</button>
+        </div>
       </div>
     </div>
   `;
@@ -274,45 +395,73 @@ function colorRow(label, hex) {
   `;
 }
 
-function chipsFor(theme) {
-  const b = theme.body.background;
-  const c = theme.card.background;
+function articleChips(theme, themeName) {
+  const b = theme.body;
+  const c = theme.card;
+  const txt = CARD_TEXT[themeName];
   return `
     <div class="colors">
-      ${colorRow('body.background',          b.color)}
-      ${colorRow('body.gradient end',        b.linearGradient[1])}
-      ${colorRow('card.background',          c.color)}
-      ${colorRow('card.gradient end',        c.linearGradient[1])}
-      ${colorRow('card.content',             theme.card.content.color)}
-      ${colorRow('card.text.title',          theme.card.text.title)}
-      ${colorRow('card.text.subtitle',       theme.card.text.subtitle)}
+      ${colorRow('body.background.baseColor',          b.background.baseColor)}
+      ${colorRow('body.background.gradient end',       b.background.linearGradient[1])}
+      ${colorRow('body.content.accentColor.overImage', b.content.accentColor.overImage)}
+      ${colorRow('body.content.accentColor.overBody',  b.content.accentColor.overBody)}
+      ${colorRow('body.content.labelColor',            b.content.labelColor)}
+      ${colorRow('card.background.baseColor',          c.background.baseColor)}
+      ${colorRow('card.background.gradient end',       c.background.linearGradient[1])}
+      ${colorRow('card.content.labelColor',            c.content.labelColor)}
+      ${colorRow('card.content.accentColor',           c.content.accentColor)}
+      ${colorRow('input · card title (default)',       txt.title)}
+      ${colorRow('input · card subtitle (default)',    txt.subtitle)}
+    </div>
+  `;
+}
+
+function affirmationChips(theme) {
+  const c = theme.card.content;
+  return `
+    <div class="colors">
+      ${colorRow('card.content.labelColor',  c.labelColor)}
+      ${colorRow('card.content.accentColor', c.accentColor)}
     </div>
   `;
 }
 
 function render(data) {
-  const { themes, imageDataUrl } = data;
+  const { article, affirmation, imageDataUrl } = data;
   const FEED_LIGHT = '#F0F0F0';
   const FEED_DARK  = '#110F0E';
 
-  results.innerHTML = `
+  // Article: 2x2 grid (light card | light body | dark card | dark body)
+  articleResults.innerHTML = `
     <div class="surface" data-theme="light" style="background:${FEED_LIGHT}; color:#2A2925">
       <p class="label">Light · feed card</p>
-      ${buildCard(themes.light, imageDataUrl, 'light')}
-      ${chipsFor(themes.light)}
+      ${buildCard(article.themes.light, imageDataUrl, 'light')}
+      ${articleChips(article.themes.light, 'light')}
     </div>
     <div class="surface" data-theme="light" style="background:${FEED_LIGHT}; color:#2A2925">
       <p class="label">Light · open state</p>
-      ${buildArticle(themes.light, imageDataUrl, 'light')}
+      ${buildArticle(article.themes.light, imageDataUrl, 'light')}
     </div>
     <div class="surface" data-theme="dark" style="background:${FEED_DARK}; color:#FFFFFF">
       <p class="label">Dark · feed card</p>
-      ${buildCard(themes.dark, imageDataUrl, 'dark')}
-      ${chipsFor(themes.dark)}
+      ${buildCard(article.themes.dark, imageDataUrl, 'dark')}
+      ${articleChips(article.themes.dark, 'dark')}
     </div>
     <div class="surface" data-theme="dark" style="background:${FEED_DARK}; color:#FFFFFF">
       <p class="label">Dark · open state</p>
-      ${buildArticle(themes.dark, imageDataUrl, 'dark')}
+      ${buildArticle(article.themes.dark, imageDataUrl, 'dark')}
+    </div>
+  `;
+
+  // Affirmation: single preview (light + dark are identical) + colors panel
+  affirmationResults.innerHTML = `
+    <div class="surface" data-theme="light" style="background:${FEED_LIGHT}; color:#2A2925">
+      <p class="label">Affirmation card</p>
+      ${buildAffirmation(affirmation.themes.light, imageDataUrl)}
+    </div>
+    <div class="surface" data-theme="light" style="background:${FEED_LIGHT}; color:#2A2925">
+      <p class="label">Color values · light = dark</p>
+      ${affirmationChips(affirmation.themes.light)}
     </div>
   `;
 }
@@ -327,27 +476,31 @@ function fileToDataUrl(file) {
 }
 
 // Copy handler — delegated so it works for re-rendered rows.
-results.addEventListener('click', async (e) => {
-  const btn = e.target.closest('.copy-btn');
-  if (!btn) return;
-  const value = btn.dataset.copy;
-  try {
-    await navigator.clipboard.writeText(value);
-    btn.innerHTML = ICON.check;
-    btn.classList.add('copied');
-    setTimeout(() => {
-      btn.innerHTML = ICON.copy;
-      btn.classList.remove('copied');
-    }, 1100);
-  } catch {
-    // Fallback for non-secure contexts: select the input next to it.
-    const input = btn.parentElement?.querySelector('input');
-    if (input) { input.select(); document.execCommand?.('copy'); }
-  }
-});
-results.addEventListener('focus', (e) => {
-  if (e.target.tagName === 'INPUT') e.target.select();
-}, true);
+function attachCopyHandler(root) {
+  root.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.copy-btn');
+    if (!btn) return;
+    const value = btn.dataset.copy;
+    try {
+      await navigator.clipboard.writeText(value);
+      btn.innerHTML = ICON.check;
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.innerHTML = ICON.copy;
+        btn.classList.remove('copied');
+      }, 1100);
+    } catch {
+      // Fallback for non-secure contexts: select the input next to it.
+      const input = btn.parentElement?.querySelector('input');
+      if (input) { input.select(); document.execCommand?.('copy'); }
+    }
+  });
+  root.addEventListener('focus', (e) => {
+    if (e.target.tagName === 'INPUT') e.target.select();
+  }, true);
+}
+attachCopyHandler(articleResults);
+attachCopyHandler(affirmationResults);
 
 fileInput.addEventListener('change', async (e) => {
   err.textContent = '';

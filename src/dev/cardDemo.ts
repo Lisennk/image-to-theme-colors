@@ -1,6 +1,6 @@
 import express from "express";
 import path from "path";
-import { composeArticleTheme } from "../lib";
+import { composeArticleTheme, composeAffirmationTheme } from "../lib";
 
 const app = express();
 app.use(express.json({ limit: "30mb" }));
@@ -22,8 +22,11 @@ app.post("/colors", async (req, res) => {
   }
   try {
     const buf = Buffer.from(m[1], "base64");
-    const colors = await composeArticleTheme(buf);
-    res.json({ ...colors, imageDataUrl });
+    const [article, affirmation] = await Promise.all([
+      composeArticleTheme(buf),
+      composeAffirmationTheme(buf),
+    ]);
+    res.json({ imageDataUrl, article, affirmation });
   } catch (err: any) {
     res.status(500).json({ error: String(err && err.message ? err.message : err) });
   }
@@ -31,5 +34,5 @@ app.post("/colors", async (req, res) => {
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3030;
 app.listen(PORT, () => {
-  console.log(`Card+article demo: http://localhost:${PORT}`);
+  console.log(`Demo: http://localhost:${PORT}`);
 });
