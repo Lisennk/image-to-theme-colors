@@ -23,8 +23,7 @@ export interface CardTheme {
  * Card colors share their hue with the body output (so the card hints at the
  * article's open-state color). Lightness and saturation are tuned for the
  * card's role on a feed: it sits on a feed background, must remain visible
- * against it, carries title + subtitle text, and a circular-control content
- * color (e.g. like-button icon).
+ * against it, and carries title + subtitle text.
  *
  * Card start L is solved against three contrast budgets:
  *   - feed bg:  1.15:1 (light) / 1.12:1 (dark) — the card must read as a
@@ -43,12 +42,20 @@ export interface CardTheme {
  * color into the new L band, but the contrast-feasible L depends on S. We
  * iterate until both converge so the final color always satisfies its
  * contrast constraints.
+ *
+ * The card content (`accentColor`) is *not* solved here — it's the body's
+ * label color, supplied by the caller. Body label and card accent serve the
+ * same role (a small hue-bearing element representing the article) so they
+ * share both algorithm and value, keeping the open-state and feed-state
+ * palettes coherent. The label is solved at 4.5:1 against the body+image
+ * composite, which sits between body and card bg in lightness — so the
+ * value clears 4.5:1 against the card surface incidentally (typically
+ * comfortably higher).
  */
 const LIGHT_FEED_MIN_CONTRAST = 1.15;
 const DARK_FEED_MIN_CONTRAST = 1.12;
 const TITLE_MIN_CONTRAST = 7.0;
 const SUBTITLE_MIN_CONTRAST = 6.0;
-const CONTENT_MIN_CONTRAST = 4.5;
 
 function isAchromatic(hsl: HSL): boolean {
   // Matches the threshold used in pickStrategy.ts for full-image achromatic
@@ -122,52 +129,12 @@ function solveDarkCardStart(
   return { h: hue, s, l };
 }
 
-/** Solve content (S, L) against a brighter card-start reference. */
-function solveLightContent(
-  hue: number,
-  seedS: number,
-  seedL: number,
-  ref: RGB,
-  lRange: [number, number],
-  sRange: [number, number]
-): HSL {
-  let s = clamp(seedS, sRange[0], sRange[1]);
-  let l = lRange[1];
-  for (let i = 0; i < 20; i++) {
-    l = clamp(findMaxLightnessAgainstLighter(hue, s, ref, CONTENT_MIN_CONTRAST, 0, 99), lRange[0], lRange[1]);
-    const newS = clamp(preserveChroma(seedS, seedL, l), sRange[0], sRange[1]);
-    if (Math.abs(newS - s) < 0.5) break;
-    s = newS;
-  }
-  return { h: hue, s, l };
-}
-
-/** Solve content (S, L) against a darker card-start reference. */
-function solveDarkContent(
-  hue: number,
-  seedS: number,
-  seedL: number,
-  ref: RGB,
-  lRange: [number, number],
-  sRange: [number, number]
-): HSL {
-  let s = clamp(seedS, sRange[0], sRange[1]);
-  let l = lRange[0];
-  for (let i = 0; i < 20; i++) {
-    l = clamp(findMinLightnessAgainstDarker(hue, s, ref, CONTENT_MIN_CONTRAST, 1, 99), lRange[0], lRange[1]);
-    const newS = clamp(preserveChroma(seedS, seedL, l), sRange[0], sRange[1]);
-    if (Math.abs(newS - s) < 0.5) break;
-    s = newS;
-  }
-  return { h: hue, s, l };
-}
-
 function generateLightCard(
   bodyLight: HSL,
-  bodyDark: HSL,
   lightFeedBg: RGB,
   titleRef: RGB,
-  subtitleRef: RGB
+  subtitleRef: RGB,
+  contentAccent: string
 ): CardTheme {
   const hue = bodyLight.h;
   const achromatic = isAchromatic(bodyLight);
@@ -184,37 +151,22 @@ function generateLightCard(
     : clamp(Math.max(start.s, preserveChroma(start.s, start.l, endL)), start.s, 95);
   const end: HSL = { h: hue, s: endS, l: endL };
 
-  // ---- Content color: deep version of the hue, AA contrast vs card start ----
-  // Saturation seed: take the more saturated of body-light and body-dark
-  // forms — the body-dark form is the "deep" expression of the hue and
-  // gives card content the punch it needs to read against the light card.
   const startRgb = hslToRgb(start);
-  const seedS = achromatic ? 0 : Math.max(bodyLight.s, bodyDark.s);
-  const seedL = achromatic ? bodyLight.l : (bodyDark.s >= bodyLight.s ? bodyDark.l : bodyLight.l);
-  const content = solveLightContent(
-    hue,
-    seedS,
-    seedL,
-    startRgb,
-    [18, 50],
-    achromatic ? [0, 0] : [15, 85]
-  );
-
   return {
     background: {
       baseColor: rgbToHex(startRgb),
       linearGradient: [rgbToHex(startRgb), rgbToHex(hslToRgb(end))],
     },
-    content: { accentColor: rgbToHex(hslToRgb(content)) },
+    content: { accentColor: contentAccent },
   };
 }
 
 function generateDarkCard(
-  bodyLight: HSL,
   bodyDark: HSL,
   darkFeedBg: RGB,
   titleRef: RGB,
-  subtitleRef: RGB
+  subtitleRef: RGB,
+  contentAccent: string
 ): CardTheme {
   const hue = bodyDark.h;
   const achromatic = isAchromatic(bodyDark);
@@ -231,37 +183,27 @@ function generateDarkCard(
     : clamp(preserveChroma(start.s, start.l, endL), 25, 100);
   const end: HSL = { h: hue, s: endS, l: endL };
 
-  // Dark-theme content is itself a light tint, so chroma-preserve from the
-  // body's light form (which tracks the hue's natural softness at high L).
   const startRgb = hslToRgb(start);
-  const seedS = achromatic ? 0 : (bodyLight.s > 0 ? bodyLight.s : bodyDark.s * 0.4);
-  const seedL = achromatic ? bodyDark.l : (bodyLight.s > 0 ? bodyLight.l : bodyDark.l);
-  const content = solveDarkContent(
-    hue,
-    seedS,
-    seedL,
-    startRgb,
-    [50, 80],
-    achromatic ? [0, 0] : [15, 70]
-  );
-
   return {
     background: {
       baseColor: rgbToHex(startRgb),
       linearGradient: [rgbToHex(startRgb), rgbToHex(hslToRgb(end))],
     },
-    content: { accentColor: rgbToHex(hslToRgb(content)) },
+    content: { accentColor: contentAccent },
   };
 }
 
 /**
  * Build card colors (background gradient + content color) for both themes,
  * using the body output as the hue source and the feed backgrounds + text
- * colors as contrast references.
+ * colors as contrast references. The card content accent is supplied by the
+ * caller (the body label color) so card icon and body label stay in sync.
  */
 export function generateCardThemes(
   bodyLightHex: string,
   bodyDarkHex: string,
+  lightContentAccent: string,
+  darkContentAccent: string,
   lightFeedBg?: RGB,
   darkFeedBg?: RGB,
   lightTitle?: string,
@@ -280,17 +222,17 @@ export function generateCardThemes(
   return {
     light: generateLightCard(
       lightHsl,
-      darkHsl,
       lightFeedBg ?? LIGHT_FEED_BG,
       lightTitleRgb,
-      lightSubtitleRgb
+      lightSubtitleRgb,
+      lightContentAccent
     ),
     dark: generateDarkCard(
-      lightHsl,
       darkHsl,
       darkFeedBg ?? DARK_FEED_BG,
       darkTitleRgb,
-      darkSubtitleRgb
+      darkSubtitleRgb,
+      darkContentAccent
     ),
   };
 }

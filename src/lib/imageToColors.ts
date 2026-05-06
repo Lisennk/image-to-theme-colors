@@ -170,7 +170,7 @@ export interface ImageToColorsOptions {
  * // result.themes.light.body.background.baseColor       "#C0D0FF"
  * // result.themes.light.body.content.labelColor         "#214154"
  * // result.themes.light.card.background.baseColor       "#D5E2ED"
- * // result.themes.light.card.content.accentColor        "#4F6678"
+ * // result.themes.light.card.content.accentColor        "#214154"  (= body.content.labelColor)
  * ```
  */
 
@@ -276,9 +276,20 @@ export async function imageToColors(
       break;
   }
 
+  const lightAccents = generateBodyAccent(base.light, controlAreaColor);
+  const darkAccents = generateBodyAccent(base.dark, controlAreaColor);
+
+  const lightLabel = generateBodyLabel(base.light, imageLowerColor);
+  const darkLabel = generateBodyLabel(base.dark, imageLowerColor);
+
+  // Card content accent reuses the body label color: same role (a small
+  // hue-bearing element representing the article) and same algorithm, so the
+  // open-state and feed-state palettes stay coherent.
   const card = generateCardThemes(
     base.light,
     base.dark,
+    lightLabel,
+    darkLabel,
     lightFeedBg,
     darkFeedBg,
     options?.lightThemeCardTitleColor,
@@ -286,12 +297,6 @@ export async function imageToColors(
     options?.darkThemeCardTitleColor,
     options?.darkThemeCardSubtitleColor
   );
-
-  const lightAccents = generateBodyAccent(base.light, controlAreaColor);
-  const darkAccents = generateBodyAccent(base.dark, controlAreaColor);
-
-  const lightLabel = generateBodyLabel(base.light, imageLowerColor);
-  const darkLabel = generateBodyLabel(base.dark, imageLowerColor);
 
   return {
     themes: {

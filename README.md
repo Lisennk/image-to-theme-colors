@@ -9,7 +9,7 @@ Given an image, the algorithm analyzes its color composition and outputs:
 
 - `body.background` — solid color and gradient for the open-state article background, with WCAG AAA (7:1) contrast against your text colors.
 - `card.background` — solid color and gradient for the feed card surface, with sufficient contrast against your feed background (1.15:1 light, 1.12:1 dark).
-- `card.content.accentColor` — color for circular controls / icons sitting on the card, with WCAG AA (4.5:1) contrast against the card surface.
+- `card.content.accentColor` — color for circular controls / icons sitting on the card. Mirrors `body.content.labelColor` so the open-state and feed-state palettes stay coherent; clears WCAG AA (4.5:1) against the card surface.
 
 …all on a shared hue per theme so the body, card, icon, and text read as one color family.
 
@@ -33,7 +33,7 @@ const result = await imageToColors("./hero.jpg");
 // result.themes.light.body.background.linearGradient  ["#C0D0FF", "#BAC9F9"]
 // result.themes.light.card.background.baseColor       "#D5E2ED"
 // result.themes.light.card.background.linearGradient  ["#D5E2ED", "#B2CADD"]
-// result.themes.light.card.content.accentColor        "#4F6678"
+// result.themes.light.card.content.accentColor        "#214154"  // = body label
 // result.themes.dark.body.background.baseColor        "#0F172F"
 // …
 ```
@@ -149,7 +149,7 @@ The algorithm runs in four phases:
 **4. Color generation** — Produces the body colors using chroma-preserving lightness adjustment, iterative S/L co-solving, and WCAG AAA contrast enforcement, then derives the card colors from the body's hue:
 
 - **Card background:** the lightest tint (light theme) / darkest shade (dark theme) that still clears the feed-background contrast budget *and* the title (7:1) + subtitle (6:1) contrast budgets. If those constraints conflict (text-readability requires a card too close in luminance to the feed bg), text wins and feed contrast may dip below its budget.
-- **Card content (`accentColor`):** the same hue at the opposite end of the L scale, sized to clear AA (4.5:1) icon contrast against the card surface.
+- **Card content (`accentColor`):** reuses `body.content.labelColor` — same hue, AA (4.5:1) contrast against the body+image label-area composite. Because that composite sits between body and card bg in lightness, the value also clears AA against the card surface (typically with margin to spare).
 
 ### Design decisions
 
