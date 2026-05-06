@@ -19,6 +19,7 @@
     "dev:server": "ts-node -P tsconfig.dev.json src/dev/server.ts",
     "dev:demo": "ts-node -P tsconfig.dev.json src/dev/cardDemo.ts",
     "dev:validate": "ts-node -P tsconfig.dev.json src/dev/validate.ts",
+    "dev:validate-affirmation": "ts-node -P tsconfig.dev.json src/dev/validateAffirmation.ts",
     "prepublishOnly": "npm run build"
   },
   "keywords": [

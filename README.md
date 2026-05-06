@@ -1,17 +1,29 @@
 # image-to-theme-colors
 
-Extract accessible light and dark theme colors from any image. Designed for an article system where:
+Extract accessible UI colors from any image. The library exposes two
+predictions tuned to two product surfaces:
 
-- The **article body** (open state) shows a hero image transitioning into a colored background via a gradient.
-- A **feed card** (closed state) sits on a feed background and previews the article's color, with a circular control (e.g. a like button) drawn on top.
+- **`predictForArticle`** (alias `imageToColors`) — for an article system
+  whose open-state body uses the image as a hero transitioning into a
+  colored background, plus a closed-state feed card and a circular
+  control (e.g. a like button) drawn on top.
+- **`predictForAffirmation`** — for an affirmation card whose entire
+  backdrop is the image, with a category tag pinned to the top and three
+  circular controls (Share, Bookmark, More) at the bottom.
 
-Given an image, the algorithm analyzes its color composition and outputs:
+For articles, the algorithm analyzes the image's color composition and outputs:
 
 - `body.background` — solid color and gradient for the open-state article background, with WCAG AAA (7:1) contrast against your text colors.
 - `card.background` — solid color and gradient for the feed card surface, with sufficient contrast against your feed background (1.15:1 light, 1.12:1 dark).
 - `card.content.accentColor` — color for circular controls / icons sitting on the card. Mirrors `body.content.labelColor` so the open-state and feed-state palettes stay coherent; clears WCAG AA (4.5:1) against the card surface.
 
 …all on a shared hue per theme so the body, card, icon, and text read as one color family.
+
+For affirmations, the algorithm samples the image's top and bottom regions
+separately (the controls' underlying surfaces) and returns:
+
+- `tagColor` — fill for the category tag at the top of the card.
+- `iconColor` — fill for the circular controls at the bottom.
 
 ![Examples showing light and dark theme colors extracted from four different images](https://raw.githubusercontent.com/Lisennk/image-to-theme-colors/master/assets/examples.png)
 
@@ -25,10 +37,12 @@ Requires Node.js 18+ and [sharp](https://sharp.pixelplumbing.com/) (installed au
 
 ## Quick start
 
-```ts
-import { imageToColors } from "image-to-theme-colors";
+Article (open-state body + closed-state card):
 
-const result = await imageToColors("./hero.jpg");
+```ts
+import { predictForArticle } from "image-to-theme-colors";
+
+const result = await predictForArticle("./hero.jpg");
 // result.themes.light.body.background.baseColor       "#C0D0FF"
 // result.themes.light.body.background.linearGradient  ["#C0D0FF", "#BAC9F9"]
 // result.themes.light.card.background.baseColor       "#D5E2ED"
@@ -36,6 +50,16 @@ const result = await imageToColors("./hero.jpg");
 // result.themes.light.card.content.accentColor        "#214154"  // = body label
 // result.themes.dark.body.background.baseColor        "#0F172F"
 // …
+```
+
+Affirmation card (image backdrop + tag + circular icons):
+
+```ts
+import { predictForAffirmation } from "image-to-theme-colors";
+
+const { tagColor, iconColor } = await predictForAffirmation("./affirmation.jpg");
+// tagColor   "#B0C1E8"
+// iconColor  "#B0C1E8"
 ```
 
 ## API
@@ -87,6 +111,39 @@ interface BackgroundColors {
   linearGradient: [string, string];  // gradient stops, e.g. ["#C0D0FF", "#BAC9F9"]
 }
 ```
+
+### `predictForAffirmation(input)`
+
+Analyzes an image and returns colors for the tag (top) and circular
+icons (bottom) of an affirmation card. The image itself is the card's
+backdrop, so each control's color is solved against the slice of the
+image it sits on.
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `input` | `string \| Buffer` | File path or image buffer |
+
+**Returns:** `Promise<PredictForAffirmationResult>`
+
+```ts
+interface PredictForAffirmationResult {
+  /** Hex color for the category tag at the top of the card. */
+  tagColor: string;
+  /** Hex color for the circular icons at the bottom of the card. */
+  iconColor: string;
+}
+```
+
+The algorithm samples the top and bottom regions separately and decides
+whether the image is *split* (top and bottom carry different visual
+weights — a sky over ground) or *uniform*. In split mode each control
+gets its own color; in uniform mode a single color is used for both. The
+output's hue mirrors the relevant region's dominant cluster, while its
+lightness and saturation are tuned so the control reads cleanly against
+the underlying image — a dark image yields a light pastel control, a
+bright vivid image yields a dark or desaturated control.
 
 ### Examples
 
@@ -173,10 +230,16 @@ cd image-to-theme-colors
 npm install
 ```
 
-**Run the validation suite** against the 10 reference examples:
+**Run the article validation suite** against the 10 reference hero images:
 
 ```bash
 npm run dev:validate
+```
+
+**Run the affirmation validation suite** against the 13 reference affirmation images:
+
+```bash
+npm run dev:validate-affirmation
 ```
 
 **Start the batch preview server** to test multiple images at once:

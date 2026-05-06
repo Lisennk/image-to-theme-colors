@@ -1,0 +1,52 @@
+File: ./source/1.png
+Color of tag: #B0C1E8
+Color of circular icons: #B0C1E8
+
+File: ./source/2.png
+Color of tag: #45443A
+Color of circular icons: #B3904C
+
+File: ./source/3.png
+Color of tag: #672825
+Color of circular icons: #FAC5C3
+
+File: ./source/4.png
+Color of tag: #ECEBDF
+Color of circular icons: #ECEBDF
+
+File: ./source/5.png
+Color of tag: #F4E6D7
+Color of circular icons: #F4E6D7
+
+File: ./source/6.png
+Color of tag: #ABCBC4
+Color of circular icons: #ABCBC4
+
+File: ./source/7.png
+Color of tag: #50504D
+Color of circular icons: #50504D
+
+File: ./source/8.png
+Color of tag: #6B624F
+Color of circular icons: #6B624F
+
+File: ./source/9.png
+Color of tag: #333333
+Color of circular icons: #333333
+
+File: ./source/10.png
+Color of tag: #EBD376 
+Color of circular icons: #EBD376
+
+File: ./source/11.png
+Color of tag: #9199A1
+Color of circular icons: #9199A1
+
+File: ./source/12.png
+Color of tag: #7E5300
+Color of circular icons: #301B00
+
+File: ./source/13.png
+Color of tag: #DCE2F0
+Color of circular icons: #798086
+

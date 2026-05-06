@@ -202,7 +202,11 @@ export async function imageToColors(
     ? hexToRgb(options.darkThemeFeedBackgroundColor)
     : DARK_FEED_BG;
 
+  // `.rotate()` with no argument applies the EXIF orientation tag and then
+  // strips it. Without this, a portrait phone photo saved sideways would
+  // have its top/bottom regions sampled from the wrong edges.
   const { data, info } = await sharp(input)
+    .rotate()
     .resize(150, 150, { fit: "inside" })
     .ensureAlpha()
     .raw()

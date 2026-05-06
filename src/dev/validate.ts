@@ -40,7 +40,7 @@ async function validate() {
   const rows: string[] = [];
 
   for (const ex of examples) {
-    const imgPath = path.resolve(__dirname, "../../examples", ex.image);
+    const imgPath = path.resolve(__dirname, "../../examples/hero-images", ex.image);
     try {
       const result = await imageToColors(imgPath);
       const lightHex = result.themes.light.body.background.baseColor;
