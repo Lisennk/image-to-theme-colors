@@ -112,7 +112,7 @@ interface BackgroundColors {
 }
 ```
 
-### `predictForAffirmation(input)`
+### `predictForAffirmation(input, options?)`
 
 Analyzes an image and returns colors for the tag (top) and circular
 icons (bottom) of an affirmation card. The image itself is the card's
@@ -124,6 +124,14 @@ image it sits on.
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `input` | `string \| Buffer` | File path or image buffer |
+| `options` | `PredictForAffirmationOptions` | Optional configuration |
+
+**Options:**
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `topRegionFraction` | `number` | `0.25` | Fraction of image height (0.05–0.5) treated as the top region (under the tag). Lower for thinner top bands when the tag covers a smaller share of the image. |
+| `bottomRegionFraction` | `number` | `0.25` | Fraction of image height (0.05–0.5) treated as the bottom region (under the icons). |
 
 **Returns:** `Promise<PredictForAffirmationResult>`
 
@@ -144,6 +152,20 @@ output's hue mirrors the relevant region's dominant cluster, while its
 lightness and saturation are tuned so the control reads cleanly against
 the underlying image — a dark image yields a light pastel control, a
 bright vivid image yields a dark or desaturated control.
+
+Example with a smaller top band (e.g. a tag that overlaps only the top
+12% of a thumbnail):
+
+```ts
+const { tagColor, iconColor } = await predictForAffirmation("./affirmation.jpg", {
+  topRegionFraction: 0.12,
+  bottomRegionFraction: 0.20,
+});
+```
+
+EXIF orientation is honored: if the image file has a rotation tag (as
+phone photos commonly do), it's applied before sampling so the top of
+the *visual* image is what gets analyzed.
 
 ### Examples
 
