@@ -1,8 +1,8 @@
 import { RGB, HSL } from "../color/types";
 import { hexToRgb, hslToRgb, rgbToHex, rgbToHsl } from "../color/conversion";
-import { contrastRatio } from "../color/contrast";
 import { clamp } from "../util/math";
 import { estimateGlassColor } from "./estimateGlass";
+import { pickContrastingL, rangeOpposite } from "./contrastSolver";
 
 /**
  * Body-content accent colors for the icon inside the iOS-26 / Liquid-Glass
@@ -43,47 +43,9 @@ import { estimateGlassColor } from "./estimateGlass";
  * at extreme L looks harsh or neon as a small icon.
  */
 
-const TIER_AA = 4.5;
-const TIER_MIN = 3.0;
-
 export interface BodyAccentColors {
   overImage: string;
   overBody: string;
-}
-
-interface Pick {
-  l: number;
-  c: number;
-}
-
-function pickAccentL(
-  hue: number,
-  saturation: number,
-  glassRgb: RGB,
-  range: [number, number],
-  direction: "darker" | "lighter"
-): Pick {
-  const STEP = 0.1;
-  let aaTier: Pick | null = null;
-  let minTier: Pick | null = null;
-  let best: Pick = { l: range[0], c: 0 };
-
-  for (let testL = range[0]; testL <= range[1]; testL += STEP) {
-    const tRgb = hslToRgb({ h: hue, s: saturation, l: testL });
-    const c = contrastRatio(tRgb, glassRgb);
-    const candidate: Pick = { l: testL, c };
-    const better = (cur: Pick | null) =>
-      cur === null ||
-      (direction === "darker" ? candidate.l > cur.l : candidate.l < cur.l);
-
-    // Within each tier, prefer the L closest to glass — that's the side
-    // of the budget with the most chroma room and the least L extreme.
-    if (c >= TIER_AA && better(aaTier)) aaTier = candidate;
-    if (c >= TIER_MIN && better(minTier)) minTier = candidate;
-    if (c > best.c) best = candidate;
-  }
-
-  return aaTier ?? minTier ?? best;
 }
 
 /**
@@ -104,20 +66,8 @@ function solveAccentForGlass(
   const s = isAchromatic ? 0 : clamp(hueSource.s, 25, 50);
 
   const direction: "darker" | "lighter" = glass.l > 50 ? "darker" : "lighter";
-
-  let range: [number, number];
-  if (direction === "darker") {
-    range = [3, Math.max(glass.l - 5, 4)];
-  } else {
-    range = [Math.min(glass.l + 5, 96), 97];
-  }
-  // Edge case: glass at an L extreme leaves almost no room on its
-  // theme-appropriate side. Fall back to the full opposite half.
-  if (range[1] - range[0] < 5) {
-    range = direction === "darker" ? [0, glass.l] : [glass.l, 100];
-  }
-
-  const result = pickAccentL(hue, s, glassRgb, range, direction);
+  const range = rangeOpposite(glass.l, direction);
+  const result = pickContrastingL(hue, s, glassRgb, range, direction);
   return rgbToHex(hslToRgb({ h: hue, s, l: result.l }));
 }
 

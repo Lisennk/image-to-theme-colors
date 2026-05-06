@@ -18,6 +18,7 @@ import { generateLightBackground } from "./strategy/generateLightBackground";
 import { generateDarkBackground } from "./strategy/generateDarkBackground";
 import { generateCardThemes, CardTheme } from "./strategy/generateCard";
 import { generateBodyAccent } from "./strategy/generateAccent";
+import { generateBodyLabel } from "./strategy/generateLabel";
 import { RGB } from "./color/types";
 
 /** Base colors returned by strategy generators (internal). */
@@ -60,6 +61,19 @@ export interface BodyContent {
     overImage: string;
     overBody: string;
   };
+  /**
+   * Color of the small category label (e.g. "Article") that sits near the
+   * bottom of the hero-image / body-gradient transition. The label
+   * background is the *composite* of the image's lower portion and the
+   * body's first gradient stop at ~83% opacity, so the label color is
+   * solved against that composite — not against the body alone.
+   *
+   * Targets 4.5:1 (WCAG AA) against the composite bg, preserves the body's
+   * hue, and uses an inverse-saturation rule (muted bg → more colorful
+   * label, vivid bg → desaturated label) so the label reads as part of
+   * the body's palette without clashing.
+   */
+  labelColor: string;
 }
 
 /** Article body (open-state) colors for one theme. */
@@ -154,6 +168,7 @@ export interface ImageToColorsOptions {
  * ```ts
  * const result = await imageToColors("./hero.jpg");
  * // result.themes.light.body.background.baseColor       "#C0D0FF"
+ * // result.themes.light.body.content.labelColor         "#214154"
  * // result.themes.light.card.background.baseColor       "#D5E2ED"
  * // result.themes.light.card.content.accentColor        "#4F6678"
  * ```
@@ -225,15 +240,24 @@ export async function imageToColors(
   const controlAreaPixels = pixels.filter(
     (px) => px.row < 0.2 && px.col > 0.5
   );
-  const fallbackPixels =
+  const controlPx =
     controlAreaPixels.length >= 10 ? controlAreaPixels : pixels;
-  const sumR = fallbackPixels.reduce((s, p) => s + p.r, 0);
-  const sumG = fallbackPixels.reduce((s, p) => s + p.g, 0);
-  const sumB = fallbackPixels.reduce((s, p) => s + p.b, 0);
   const controlAreaColor: RGB = {
-    r: Math.round(sumR / fallbackPixels.length),
-    g: Math.round(sumG / fallbackPixels.length),
-    b: Math.round(sumB / fallbackPixels.length),
+    r: Math.round(controlPx.reduce((s, p) => s + p.r, 0) / controlPx.length),
+    g: Math.round(controlPx.reduce((s, p) => s + p.g, 0) / controlPx.length),
+    b: Math.round(controlPx.reduce((s, p) => s + p.b, 0) / controlPx.length),
+  };
+
+  // ---- Image color in the lower portion (label transition zone) ----
+  // The label sits where the image's lower edge fades into the body
+  // gradient. The image color in that region is what shows through the
+  // body's ~17% transparency at the label's vertical position.
+  const lowerPixels = pixels.filter((px) => px.row > 0.8);
+  const lowerPx = lowerPixels.length >= 10 ? lowerPixels : pixels;
+  const imageLowerColor: RGB = {
+    r: Math.round(lowerPx.reduce((s, p) => s + p.r, 0) / lowerPx.length),
+    g: Math.round(lowerPx.reduce((s, p) => s + p.g, 0) / lowerPx.length),
+    b: Math.round(lowerPx.reduce((s, p) => s + p.b, 0) / lowerPx.length),
   };
 
   let base: BaseColors;
@@ -266,6 +290,9 @@ export async function imageToColors(
   const lightAccents = generateBodyAccent(base.light, controlAreaColor);
   const darkAccents = generateBodyAccent(base.dark, controlAreaColor);
 
+  const lightLabel = generateBodyLabel(base.light, imageLowerColor);
+  const darkLabel = generateBodyLabel(base.dark, imageLowerColor);
+
   return {
     themes: {
       light: {
@@ -274,7 +301,10 @@ export async function imageToColors(
             baseColor: base.light,
             linearGradient: [base.light, deriveGradient(base.light)],
           },
-          content: { accentColor: lightAccents },
+          content: {
+            accentColor: lightAccents,
+            labelColor: lightLabel,
+          },
         },
         card: card.light,
       },
@@ -284,7 +314,10 @@ export async function imageToColors(
             baseColor: base.dark,
             linearGradient: [base.dark, deriveGradient(base.dark)],
           },
-          content: { accentColor: darkAccents },
+          content: {
+            accentColor: darkAccents,
+            labelColor: darkLabel,
+          },
         },
         card: card.dark,
       },
