@@ -4,6 +4,7 @@ export type {
   ImageToColorsOptions,
   ThemeColors,
   BodyTheme,
+  BodyContent,
   BackgroundColors,
 } from "./imageToColors";
 export type { CardTheme } from "./strategy/generateCard";

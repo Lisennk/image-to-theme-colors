@@ -17,6 +17,8 @@ import { generateDominantMid } from "./strategy/generateDominantMid";
 import { generateLightBackground } from "./strategy/generateLightBackground";
 import { generateDarkBackground } from "./strategy/generateDarkBackground";
 import { generateCardThemes, CardTheme } from "./strategy/generateCard";
+import { generateBodyAccent } from "./strategy/generateAccent";
+import { RGB } from "./color/types";
 
 /** Base colors returned by strategy generators (internal). */
 export interface BaseColors {
@@ -32,9 +34,38 @@ export interface BackgroundColors {
   linearGradient: [string, string];
 }
 
+/** Body content colors that overlay the body background. */
+export interface BodyContent {
+  /**
+   * Icon color used inside the iOS-26 / Liquid-Glass control container at
+   * the top of the article. Two values are returned because the icon's
+   * *immediate* background — the glass tint — looks different depending
+   * on what's underneath it during scroll:
+   *
+   *  - `overImage`: applies when the control overlaps the image (initial
+   *                 state); solved against the glass tint over the image's
+   *                 top-right region. Same in light and dark themes (the
+   *                 host glass component is theme-independent and the
+   *                 image is the same).
+   *  - `overBody`:  applies when the control has scrolled to sit over the
+   *                 article body; solved against the glass tint over the
+   *                 body color. Differs per theme because the body color
+   *                 itself differs per theme.
+   *
+   * Each accent targets 4.5:1 contrast (WCAG AA) against its glass — the
+   * legibility/character sweet spot the reference designer picked. Falls
+   * back to 3:1 (SC 1.4.11 floor) if 4.5:1 isn't reachable.
+   */
+  accentColor: {
+    overImage: string;
+    overBody: string;
+  };
+}
+
 /** Article body (open-state) colors for one theme. */
 export interface BodyTheme {
   background: BackgroundColors;
+  content: BodyContent;
 }
 
 /** Both surfaces (article body + feed card) for one theme. */
@@ -186,6 +217,25 @@ export async function imageToColors(
   const analysis = analyzePixels(pixels);
   const strategy = pickStrategy(analysis);
 
+  // ---- Image color where the iOS glass control sits (top-right corner) ----
+  // The control is approximately top 20% rows, right half. As the user
+  // scrolls, the image moves up under the control, so this region is the
+  // most representative of what the icon is briefly placed against before
+  // the body gradient takes over.
+  const controlAreaPixels = pixels.filter(
+    (px) => px.row < 0.2 && px.col > 0.5
+  );
+  const fallbackPixels =
+    controlAreaPixels.length >= 10 ? controlAreaPixels : pixels;
+  const sumR = fallbackPixels.reduce((s, p) => s + p.r, 0);
+  const sumG = fallbackPixels.reduce((s, p) => s + p.g, 0);
+  const sumB = fallbackPixels.reduce((s, p) => s + p.b, 0);
+  const controlAreaColor: RGB = {
+    r: Math.round(sumR / fallbackPixels.length),
+    g: Math.round(sumG / fallbackPixels.length),
+    b: Math.round(sumB / fallbackPixels.length),
+  };
+
   let base: BaseColors;
   switch (strategy) {
     case "achromatic":
@@ -213,6 +263,9 @@ export async function imageToColors(
     options?.darkThemeCardSubtitleColor
   );
 
+  const lightAccents = generateBodyAccent(base.light, controlAreaColor);
+  const darkAccents = generateBodyAccent(base.dark, controlAreaColor);
+
   return {
     themes: {
       light: {
@@ -221,6 +274,7 @@ export async function imageToColors(
             baseColor: base.light,
             linearGradient: [base.light, deriveGradient(base.light)],
           },
+          content: { accentColor: lightAccents },
         },
         card: card.light,
       },
@@ -230,6 +284,7 @@ export async function imageToColors(
             baseColor: base.dark,
             linearGradient: [base.dark, deriveGradient(base.dark)],
           },
+          content: { accentColor: darkAccents },
         },
         card: card.dark,
       },
