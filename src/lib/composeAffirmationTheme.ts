@@ -1,6 +1,6 @@
-import sharp from "sharp";
 import { rgbToHsl, hslToRgb, rgbToHex } from "./color/conversion";
 import { clamp, percentile, hueDistance, circularWeightedMean } from "./util/math";
+import { extractPixels } from "./analysis/extractPixels";
 import { PixelData } from "./analysis/types";
 import { RGB } from "./color/types";
 
@@ -521,38 +521,6 @@ function pickColor(
     outH = topThin.dominantHue;
   }
   return rgbToHex(hslToRgb({ h: outH, s: outS, l: outL }));
-}
-
-/** Extract pixel data from a sharp-decoded image buffer. */
-async function extractPixels(input: string | Buffer): Promise<PixelData[]> {
-  // `.rotate()` with no argument applies the EXIF orientation tag and then
-  // strips it. Without this, a portrait phone photo saved sideways would
-  // have its top/bottom regions sampled from the wrong edges.
-  const { data, info } = await sharp(input)
-    .rotate()
-    .resize(150, 150, { fit: "inside" })
-    .ensureAlpha()
-    .raw()
-    .toBuffer({ resolveWithObject: true });
-  const width = info.width;
-  const height = info.height;
-  const pixels: PixelData[] = [];
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const offset = (y * width + x) * 4;
-      if (data[offset + 3] < 128) continue;
-      const r = data[offset];
-      const g = data[offset + 1];
-      const b = data[offset + 2];
-      const hsl = rgbToHsl({ r, g, b });
-      // HSL S is unstable at extreme L — dampen so near-white / near-black
-      // pixels read as achromatic.
-      if (hsl.l > 95) hsl.s *= (100 - hsl.l) / 5;
-      else if (hsl.l < 5) hsl.s *= hsl.l / 5;
-      pixels.push({ ...hsl, r, g, b, row: y / height, col: x / width });
-    }
-  }
-  return pixels;
 }
 
 /**
