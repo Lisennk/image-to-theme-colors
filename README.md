@@ -31,7 +31,7 @@ Affirmation overlays don't change with theme, so the `light` and `dark`
 values are identical — the wrap is preserved for API parity with
 `composeArticleTheme`.
 
-![Examples showing light and dark theme colors extracted from four different images](https://raw.githubusercontent.com/Lisennk/image-to-theme-colors/master/assets/examples.png)
+![Article themes (light and dark) composed from four different hero images](https://raw.githubusercontent.com/Lisennk/image-to-theme-colors/master/assets/examples.png)
 
 ## Install
 
@@ -106,16 +106,48 @@ interface ArticleTheme {
 }
 
 interface ArticleThemeColors {
-  body: { background: BackgroundColors };
-  card: {
-    background: BackgroundColors;
-    content: { accentColor: string };
+  body: BodyTheme;
+  card: CardTheme;
+}
+
+interface BodyTheme {
+  background: BackgroundColors;
+  content: BodyContent;
+}
+
+interface BodyContent {
+  /**
+   * Icon color inside the Liquid-Glass control at the top of the
+   * article. Two values for the scroll crossfade: `overImage` while
+   * the control sits over the hero, `overBody` after it scrolls onto
+   * the body background. Each clears 4.5:1 (WCAG AA) against its
+   * glass tint, falling back to 3:1 when the theme-appropriate side
+   * has no room.
+   */
+  accentColor: { overImage: string; overBody: string };
+  /**
+   * Color of the small category label (e.g. "Article") that sits in
+   * the hero-to-body transition zone. Solved against the composite of
+   * the body's first gradient stop and the image's lower portion at
+   * the label's vertical position. Reused as `card.content.accentColor`
+   * so the open-state and feed-state palettes stay coherent.
+   */
+  labelColor: string;
+}
+
+interface CardTheme {
+  background: BackgroundColors;
+  content: {
+    /** Circular control on the feed card. = body.content.labelColor. */
+    accentColor: string;
   };
 }
 
 interface BackgroundColors {
-  baseColor: string;                 // base color / first gradient stop, e.g. "#C0D0FF"
-  linearGradient: [string, string];  // gradient stops, e.g. ["#C0D0FF", "#BAC9F9"]
+  /** Base color / first gradient stop, e.g. `"#C0D0FF"`. */
+  baseColor: string;
+  /** Gradient stops, e.g. `["#C0D0FF", "#BAC9F9"]`. */
+  linearGradient: [string, string];
 }
 ```
 
@@ -162,14 +194,8 @@ interface AffirmationThemeColors {
 }
 ```
 
-The algorithm samples the top and bottom regions separately and decides
-whether the image is *split* (top and bottom carry different visual
-weights — a sky over ground) or *uniform*. In split mode each control
-gets its own color; in uniform mode a single color is used for both. The
-output's hue mirrors the relevant region's dominant cluster, while its
-lightness and saturation are tuned so the control reads cleanly against
-the underlying image — a dark image yields a light pastel control, a
-bright vivid image yields a dark or desaturated control.
+See [How `composeAffirmationTheme` works](#how-composeaffirmationtheme-works)
+below for the algorithm details.
 
 Example with a smaller top band (e.g. a label that overlaps only the
 top 12% of a thumbnail):
@@ -181,10 +207,6 @@ const result = await composeAffirmationTheme("./affirmation.jpg", {
 });
 const { labelColor, accentColor } = result.themes.light.card.content;
 ```
-
-EXIF orientation is honored: if the image file has a rotation tag (as
-phone photos commonly do), it's applied before sampling so the top of
-the *visual* image is what gets analyzed.
 
 ### Examples
 
@@ -227,12 +249,30 @@ app.post("/upload", upload.single("image"), async (req, res) => {
 });
 ```
 
-## How it works
+Affirmation card with overlays applied in CSS:
 
-This section describes the **article** algorithm (`composeArticleTheme`).
-The affirmation algorithm (`composeAffirmationTheme`) follows a different
-flow — see the per-region split/uniform discussion in the
-`composeAffirmationTheme` section above.
+```ts
+const aff = await composeAffirmationTheme("./affirmation.jpg");
+const { labelColor, accentColor } = aff.themes.light.card.content;
+
+cardBackdropEl.style.backgroundImage = `url("./affirmation.jpg")`;
+labelEl.style.color = labelColor;            // category tag at top
+shareIcon.style.color = accentColor;         // circular controls at bottom
+bookmarkIcon.style.color = accentColor;
+moreIcon.style.color = accentColor;
+```
+
+## Errors
+
+Both functions reject with the underlying `sharp` error if the input
+can't be decoded (unsupported format, corrupted file, missing path).
+There's no input validation beyond what `sharp` does — pass valid
+image bytes or a readable file path. Fully transparent images
+(every pixel below the alpha threshold) will throw on the empty pixel
+array; this is rare in practice but worth noting if you accept
+arbitrary uploads.
+
+## How `composeArticleTheme` works
 
 The article algorithm runs in four phases:
 
@@ -263,6 +303,44 @@ The article algorithm runs in four phases:
 - **Multi-hue images**: When the bottom edge has a distinctly different color from the dominant (e.g. green hill below blue sky), the algorithm uses the bottom color for the dark theme and the accent for the light theme.
 
 - **Card hue follows body**: The feed card never invents its own hue — it inherits from the body so that the closed-state preview, the open-state background, and the icon all read as the same color family.
+
+## How `composeAffirmationTheme` works
+
+The affirmation algorithm samples the top and bottom slices of the
+image (each ~25% by height, configurable) and decides which mode the
+image is in:
+
+- **Split** when the slices' median lightness differ enough that the
+  image reads as two zones (e.g. a sky over a ground). Label and
+  accent are solved independently against their own slice.
+- **Uniform** otherwise. The label is solved against the top slice
+  and reused as the accent, since both controls sit on the same
+  visual character.
+
+Within each mode the output's hue mirrors the relevant slice's
+dominant cluster, while its lightness and saturation are tuned so
+the control reads cleanly against the underlying image. A dark image
+yields a light pastel control; a bright vivid image yields a dark
+or desaturated control. Fully achromatic regions (low saturation
+overall, e.g. a black-and-white text page) yield a near-gray output.
+
+EXIF orientation is honored before sampling, so phone photos saved
+sideways are analyzed against the visual top of the image, not the
+file's storage top.
+
+### Design decisions
+
+- **Top-anchored hue under low purity**: when the top slice mixes two
+  competing hues (e.g. a horizon line cutting through it), the very
+  topmost band gets a separate read so the label takes the cleaner
+  dominant rather than the saturation-weighted average.
+- **Identical light/dark values**: affirmation overlays don't change
+  with theme — the image itself is the same. The dual-theme wrap
+  exists for API parity with `composeArticleTheme`.
+- **Pathological-input fallback**: when either slice is too small to
+  summarize (extreme aspect ratios, tiny images), the algorithm
+  collapses to a single combined-image color rather than producing
+  a split decision from a sparse histogram.
 
 ## Performance
 
@@ -310,4 +388,4 @@ npm run build
 
 ## License
 
-MIT
+MIT — see [LICENSE](./LICENSE).
