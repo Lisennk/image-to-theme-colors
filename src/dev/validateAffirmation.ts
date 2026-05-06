@@ -65,8 +65,8 @@ async function validate(): Promise<void> {
     }
     try {
       const result = await composeAffirmationTheme(imgPath);
-      const labelHex = result.themes.light.content.labelColor;
-      const accentHex = result.themes.light.content.accentColor;
+      const labelHex = result.themes.light.card.content.labelColor;
+      const accentHex = result.themes.light.card.content.accentColor;
       const tagDiff = colorDiffPercent(
         hexToRgb(labelHex),
         hexToRgb(ex.expectedTag)

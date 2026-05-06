@@ -21,10 +21,11 @@ For articles, the algorithm analyzes the image's color composition and outputs:
 
 For affirmations, the algorithm samples the image's top and bottom regions
 (the overlays' underlying surfaces) and returns the same `themes.{light,dark}`
-shape:
+shape, with overlays nested under the same `card.content` namespace the
+article uses for its closed-state surface:
 
-- `content.labelColor` — fill for the category label at the top of the card.
-- `content.accentColor` — fill for the circular controls at the bottom.
+- `card.content.labelColor` — fill for the category label at the top of the card.
+- `card.content.accentColor` — fill for the circular controls at the bottom.
 
 Affirmation overlays don't change with theme, so the `light` and `dark`
 values are identical — the wrap is preserved for API parity with
@@ -63,9 +64,9 @@ Affirmation card (image backdrop + label + circular icons):
 import { composeAffirmationTheme } from "image-to-theme-colors";
 
 const result = await composeAffirmationTheme("./affirmation.jpg");
-// result.themes.light.content.labelColor   "#B0C1E8"
-// result.themes.light.content.accentColor  "#B0C1E8"
-// result.themes.dark.content.labelColor    "#B0C1E8"  (same as light)
+// result.themes.light.card.content.labelColor   "#B0C1E8"
+// result.themes.light.card.content.accentColor  "#B0C1E8"
+// result.themes.dark.card.content.labelColor    "#B0C1E8"  (same as light)
 ```
 
 ## API
@@ -150,11 +151,13 @@ interface AffirmationTheme {
 }
 
 interface AffirmationThemeColors {
-  content: {
-    /** Color for the category label at the top (≈ article body.content.labelColor). */
-    labelColor: string;
-    /** Color for the circular icons at the bottom (≈ article card.content.accentColor). */
-    accentColor: string;
+  card: {
+    content: {
+      /** Color for the category label at the top (≈ article body.content.labelColor). */
+      labelColor: string;
+      /** Color for the circular icons at the bottom (≈ article card.content.accentColor). */
+      accentColor: string;
+    };
   };
 }
 ```
@@ -176,7 +179,7 @@ const result = await composeAffirmationTheme("./affirmation.jpg", {
   topRegionFraction: 0.12,
   bottomRegionFraction: 0.20,
 });
-const { labelColor, accentColor } = result.themes.light.content;
+const { labelColor, accentColor } = result.themes.light.card.content;
 ```
 
 EXIF orientation is honored: if the image file has a rotation tag (as

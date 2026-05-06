@@ -7,26 +7,31 @@ import { RGB } from "./color/types";
 /**
  * Colors for the affirmation card's overlay elements in one theme.
  *
- * The two fields mirror the roles of the article API:
- *  - `labelColor` is the small category label at the top of the card
- *    (e.g. "Motivation phrase") — same role as
- *    `ArticleTheme.themes.{light,dark}.body.content.labelColor`.
+ * The shape mirrors `ArticleTheme`'s `card` namespace — an affirmation
+ * IS a card (its only surface), so its overlay colors live under
+ * `card.content`. Two fields:
+ *  - `labelColor` is the category label at the top (e.g. "Motivation
+ *    phrase") — same role as `body.content.labelColor` in the article
+ *    API, but on the card surface since affirmation has no separate
+ *    body.
  *  - `accentColor` is the circular controls at the bottom (Share,
- *    Bookmark, More) — same role as
- *    `ArticleTheme.themes.{light,dark}.card.content.accentColor`.
+ *    Bookmark, More) — same role as `card.content.accentColor` in the
+ *    article API.
  */
 export interface AffirmationThemeColors {
-  content: {
-    /**
-     * Hex color (e.g. `"#B0C1E8"`) for the category label pinned at the
-     * top of the card. Solved against the image's top region.
-     */
-    labelColor: string;
-    /**
-     * Hex color for the circular control icons at the bottom of the
-     * card. Solved against the image's bottom region.
-     */
-    accentColor: string;
+  card: {
+    content: {
+      /**
+       * Hex color (e.g. `"#B0C1E8"`) for the category label pinned at
+       * the top of the card. Solved against the image's top region.
+       */
+      labelColor: string;
+      /**
+       * Hex color for the circular control icons at the bottom of the
+       * card. Solved against the image's bottom region.
+       */
+      accentColor: string;
+    };
   };
 }
 
@@ -609,7 +614,7 @@ export async function composeAffirmationTheme(
   // `composeArticleTheme`.
   const wrap = (labelColor: string, accentColor: string): AffirmationTheme => {
     const colors: AffirmationThemeColors = {
-      content: { labelColor, accentColor },
+      card: { content: { labelColor, accentColor } },
     };
     return { themes: { light: colors, dark: colors } };
   };
